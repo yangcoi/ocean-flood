@@ -117,7 +117,16 @@ Thumbs.db
 
 ---
 
-## 5. Checklist Trước Khi Merge Vào Nhánh `main`
+## 5. Lộ Trình Triển Khai Git: Local vs Remote (Đã chốt)
+
+* **Giai đoạn Tài liệu (Phase 0 – Phase 3):** Hoạt động **100% trên Git Local**. 
+  - Mọi thao tác commit, branch, rollback đều xử lý nhanh chóng, an toàn và bảo mật offline trên máy cá nhân mà không cần remote.
+* **Giai đoạn Lập trình & Triển khai (Phase 4 – Phase 6):** Khởi tạo **GitHub Remote Repository (Private)**.
+  - Khi bắt đầu viết mã nguồn và chuẩn bị deploy web, dự án sẽ được push lên GitHub cá nhân để kết nối CI/CD tự động build lên các nền tảng hosting miễn phí (Vercel / Cloudflare Pages / Render).
+
+---
+
+## 6. Checklist Trước Khi Merge Vào Nhánh `main`
 
 Chủ dự án chỉ merge nhánh vào `main` khi đạt đủ 5 tiêu chí:
 - [ ] Code/Tài liệu bám sát đúng mục tiêu của prompt, không có thay đổi thừa ngoài phạm vi.
@@ -128,18 +137,19 @@ Chủ dự án chỉ merge nhánh vào `main` khi đạt đủ 5 tiêu chí:
 
 ---
 
-## 6. Quyết Định Đã Chốt
+## 7. Quyết Định Đã Chốt
 1. Áp dụng quy trình **Trunk-Based với Agent Feature Branches**.
 2. Tiêu chuẩn commit: **Conventional Commits**.
 3. Cấm tuyệt đối commit các file dữ liệu GIS thô dạng nhị phân nặng (>10MB) và file chứa biến môi trường `.env`.
+4. **Chiến lược Git:** Sử dụng Git Local từ Phase 0 đến Phase 3; chỉ thiết lập GitHub Remote (Private) khi bắt đầu Phase 4 (Build).
 
 ---
 
-## 7. Câu Hỏi Mở Cho Chủ Dự Án
-1. Bạn đã kết nối dự án này với tài khoản GitHub cá nhân chưa (ví dụ: push lên `github.com/yangcoi/ocean-flood`), hay hiện tại chỉ làm việc cục bộ (local git)?
+## 8. Câu Hỏi Mở Cho Chủ Dự Án
+*(Đã giải quyết xong ở Gate 0 — Thống nhất lộ trình Git Local trước, Remote sau).*
 
 ---
 
-## 8. Chuyển Giao / Rủi Ro
+## 9. Chuyển Giao / Rủi Ro
 * **Rủi ro:** Khi sử dụng AI agent tự động sinh code, nếu không quản lý git chặt chẽ sẽ dễ bị commit các đoạn code rác hoặc đè mất code cũ đang hoạt động.
-* **Chuyển giao:** Bàn giao quy trình này cho **Agents Orchestrator** trong Task 0.3 để lập bảng ma trận điều phối toàn dự án.
+* **Chuyển giao:** Bàn giao quy trình này cho toàn bộ dự án từ Phase 1 trở đi.
