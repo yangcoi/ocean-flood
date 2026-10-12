@@ -19,6 +19,7 @@ import RoutePlannerDrawer, {
   SAVED_COMMUTE_STORAGE_KEY,
   POPULAR_HCM_COMMUTE_PRESETS,
   type SavedCommutePreset,
+  type LiveTrackState,
 } from '@/components/RoutePlannerDrawer';
 import CrowdReportModal from '@/components/CrowdReportModal';
 
@@ -66,7 +67,7 @@ export default function OceanFloodHomePage() {
   const [isLoadingAlerts, setIsLoadingAlerts] = useState<boolean>(true);
   const [isOffline, setIsOffline] = useState<boolean>(false);
 
-  // 3. Trạng thái chọn Điểm ngập / Báo cáo / Chỉ đường / Báo ngập 5 lớp
+  // 3. Trạng thái chọn Điểm ngập / Báo cáo / Chỉ đường / Live Track / Báo ngập 5 lớp
   const [selectedHotspot, setSelectedHotspot] =
     useState<HotspotForecastProperties | null>(null);
   const [selectedCrowdReport, setSelectedCrowdReport] =
@@ -78,9 +79,18 @@ export default function OceanFloodHomePage() {
   const [routeOrigin, setRouteOrigin] = useState<RouteWaypointInput | null>(null);
   const [routeDestination, setRouteDestination] =
     useState<RouteWaypointInput | null>(null);
+  const [liveTrackState, setLiveTrackState] = useState<LiveTrackState>({
+    isActive: false,
+    currentCoord: null,
+    bearingDeg: 0,
+    progressPct: 0,
+    followCamera: false,
+  });
 
   const [isReportModalOpen, setIsReportModalOpen] = useState<boolean>(false);
+  const [reportTargetHotspotId, setReportTargetHotspotId] = useState<string | null>(null);
   const [showLegend, setShowLegend] = useState<boolean>(false);
+  const [showFloodStrip, setShowFloodStrip] = useState<boolean>(true);
 
   // 4. Trạng thái GPS & Khung hiển thị
   const [showGpsConsentModal, setShowGpsConsentModal] = useState<boolean>(false);
@@ -419,6 +429,7 @@ export default function OceanFloodHomePage() {
           userGpsLocation={userGpsLocation}
           showLegend={showLegend}
           onCloseLegend={() => setShowLegend(false)}
+          liveTrackState={liveTrackState}
         />
 
         {/* 3. NÚT ĐỊNH VỊ GPS & CHÚ GIẢI BÊN PHẢI */}
@@ -432,16 +443,16 @@ export default function OceanFloodHomePage() {
           />
         )}
 
-        {/* 4. THANH CÔNG CỤ ĐÁY TỐI GIẢN KIỂU GOOGLE MAPS (Ẩn khi đang mở Chỉ đường hoặc Thẻ chi tiết điểm ngập) */}
+        {/* 4. BĂNG CHUYỀN THÔNG TIN & HÌNH ẢNH VÙNG NGẬP + CỤM NÚT ĐÁY KIỂU GOOGLE MAPS */}
         {!isRouteDrawerOpen && !selectedHotspot && !selectedCrowdReport && (
-          <div className="absolute inset-x-3 bottom-3 z-20 pointer-events-none flex flex-col gap-2">
-            {/* Hàng pill nhỏ: Chọn nhanh Xe máy / Ô tô & Đi làm 1 chạm */}
-            <div className="pointer-events-auto flex items-center justify-between gap-2">
+          <div className="absolute inset-x-2.5 bottom-2.5 z-20 pointer-events-none flex flex-col gap-2">
+            {/* Hàng pill: Chọn Xe máy / Ô tô + Ẩn/Hiện danh sách vùng ngập + Đi làm 1 chạm */}
+            <div className="pointer-events-auto flex items-center justify-between gap-1.5">
               <div className="flex items-center bg-white/95 dark:bg-slate-900/95 p-1 rounded-full shadow-lg border border-slate-200/90 dark:border-slate-700">
                 <button
                   type="button"
                   onClick={() => setVehicleType('motorcycle')}
-                  className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 transition ${
+                  className={`px-2.5 py-1 rounded-full text-xs font-bold flex items-center gap-1 transition ${
                     vehicleType === 'motorcycle'
                       ? 'bg-[#1A73E8] text-white shadow-sm'
                       : 'text-slate-600 dark:text-slate-300'
@@ -453,7 +464,7 @@ export default function OceanFloodHomePage() {
                 <button
                   type="button"
                   onClick={() => setVehicleType('car')}
-                  className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 transition ${
+                  className={`px-2.5 py-1 rounded-full text-xs font-bold flex items-center gap-1 transition ${
                     vehicleType === 'car'
                       ? 'bg-[#1A73E8] text-white shadow-sm'
                       : 'text-slate-600 dark:text-slate-300'
@@ -464,17 +475,91 @@ export default function OceanFloodHomePage() {
                 </button>
               </div>
 
-              <button
-                type="button"
-                onClick={handleQuickSavedCommuteClick}
-                className="px-3 py-1.5 rounded-full bg-white/95 dark:bg-slate-900/95 text-slate-700 dark:text-slate-200 font-bold text-xs shadow-lg border border-slate-200/90 dark:border-slate-700 flex items-center gap-1 active:scale-95 transition"
-              >
-                <Bookmark className="w-3.5 h-3.5 text-[#1A73E8]" />
-                <span>Đi làm (1 chạm)</span>
-              </button>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setShowFloodStrip((prev) => !prev)}
+                  className="px-2.5 py-1.5 rounded-full bg-white/95 dark:bg-slate-900/95 text-slate-700 dark:text-slate-200 font-bold text-[11px] shadow-lg border border-slate-200/90 dark:border-slate-700 transition"
+                >
+                  {showFloodStrip ? 'Thu gọn thẻ ▼' : `🌊 Xem ${features.length} vùng ngập ▲`}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleQuickSavedCommuteClick}
+                  className="px-2.5 py-1.5 rounded-full bg-white/95 dark:bg-slate-900/95 text-slate-700 dark:text-slate-200 font-bold text-[11px] shadow-lg border border-slate-200/90 dark:border-slate-700 flex items-center gap-1 active:scale-95 transition"
+                >
+                  <Bookmark className="w-3.5 h-3.5 text-[#1A73E8]" />
+                  <span>Đi làm</span>
+                </button>
+              </div>
             </div>
 
-            {/* Hàng chính: 2 Nút lớn kiểu Google Maps ("Chỉ đường né ngập" & "Báo ngập") */}
+            {/* Băng chuyền ngang các vùng đang ngập kèm hình ảnh mực nước & Camera (Giống Google Maps Explore Strip) */}
+            {showFloodStrip && features.length > 0 && (
+              <div className="pointer-events-auto flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
+                {features.slice(0, 8).map((f) => {
+                  const p = f.properties;
+                  const isSevere = p.severity_level >= 2;
+                  return (
+                    <button
+                      key={p.hotspot_id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedCrowdReport(null);
+                        setIsRouteDrawerOpen(false);
+                        setSelectedHotspot(p);
+                      }}
+                      className="w-60 shrink-0 text-left bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-2xl p-2.5 shadow-lg border border-slate-200/90 dark:border-slate-700 flex items-center gap-2.5 hover:border-blue-400 active:scale-[0.98] transition"
+                    >
+                      {/* Thumbnail trực quan mực nước & Camera */}
+                      <div
+                        className={`w-14 h-14 rounded-xl shrink-0 flex flex-col items-center justify-center text-white font-black relative overflow-hidden ${
+                          p.severity_level === 3
+                            ? 'bg-gradient-to-b from-slate-800 to-red-600'
+                            : p.severity_level === 2
+                            ? 'bg-gradient-to-b from-slate-800 to-orange-500'
+                            : 'bg-gradient-to-b from-slate-800 to-blue-600'
+                        }`}
+                      >
+                        <span className="text-[9px] font-bold bg-black/40 px-1 rounded">
+                          📸 ẢNH
+                        </span>
+                        <span className="text-xs font-black mt-0.5">
+                          ~{p.estimated_depth_cm}cm
+                        </span>
+                        <span className="text-[8px] opacity-90">
+                          {p.nearby_camera ? '📹 Có Cam' : '🌊 Thực tế'}
+                        </span>
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1">
+                          <span
+                            className={`px-1.5 py-0.2 rounded text-[9px] font-extrabold text-white ${
+                              isSevere ? 'bg-red-600' : 'bg-amber-500 text-slate-950'
+                            }`}
+                          >
+                            {p.severity_label}
+                          </span>
+                          <span className="text-[10px] text-slate-500 truncate">
+                            {p.district}
+                          </span>
+                        </div>
+                        <div className="text-xs font-extrabold text-slate-900 dark:text-white truncate mt-0.5">
+                          {p.street_name.split('(')[0]}
+                        </div>
+                        <div className="text-[10px] text-[#1A73E8] dark:text-blue-400 font-bold truncate mt-0.5">
+                          Bấm xem hình ảnh & Camera ➔
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Hàng chính: 2 Nút lớn nổi bật ("Chỉ đường né ngập" & "📸 Chụp ảnh báo ngập") */}
             <div className="pointer-events-auto flex items-center gap-2">
               <button
                 type="button"
@@ -483,7 +568,7 @@ export default function OceanFloodHomePage() {
                   setSelectedCrowdReport(null);
                   setIsRouteDrawerOpen(true);
                 }}
-                className="flex-1 h-12 px-4 rounded-full bg-[#1A73E8] hover:bg-blue-700 active:scale-[0.99] text-white font-bold text-sm shadow-[0_6px_20px_rgba(26,115,232,0.4)] flex items-center justify-center gap-2 transition"
+                className="flex-1 h-12 px-4 rounded-full bg-[#1A73E8] hover:bg-blue-700 active:scale-[0.99] text-white font-extrabold text-sm shadow-[0_6px_20px_rgba(26,115,232,0.4)] flex items-center justify-center gap-2 transition"
               >
                 <Navigation className="w-4 h-4 fill-white" />
                 <span>Chỉ đường né ngập</span>
@@ -491,17 +576,20 @@ export default function OceanFloodHomePage() {
 
               <button
                 type="button"
-                onClick={() => setIsReportModalOpen(true)}
-                className="h-12 px-4 rounded-full bg-white dark:bg-slate-900 hover:bg-slate-50 active:scale-95 text-red-600 dark:text-red-400 font-bold text-sm shadow-lg border border-slate-200 dark:border-slate-700 flex items-center justify-center gap-1.5 shrink-0 transition"
+                onClick={() => {
+                  setReportTargetHotspotId(null);
+                  setIsReportModalOpen(true);
+                }}
+                className="h-12 px-4 rounded-full bg-orange-500 hover:bg-orange-600 active:scale-95 text-white font-extrabold text-sm shadow-[0_6px_20px_rgba(249,115,22,0.4)] flex items-center justify-center gap-1.5 shrink-0 transition"
               >
                 <Camera className="w-4 h-4" />
-                <span>Báo ngập</span>
+                <span>📸 Chụp báo ngập</span>
               </button>
             </div>
           </div>
         )}
 
-        {/* 5. THẺ CHI TIẾT ĐIỂM NGẬP GỌN GÀNG KIỂU GOOGLE MAPS */}
+        {/* 5. THẺ CHI TIẾT VÙNG NGẬP ĐẦY ĐỦ HÌNH ẢNH, THƯỚC ĐO MỰC NƯỚC & CAMERA TTGT */}
         <AlertBottomSheet
           selectedHotspot={selectedHotspot}
           selectedCrowdReport={selectedCrowdReport}
@@ -513,9 +601,13 @@ export default function OceanFloodHomePage() {
           }}
           onRefreshAlerts={fetchAlertsData}
           onOpenRouteToAvoid={handleOpenRouteToAvoidHotspot}
+          onOpenCameraReport={(hotspotId) => {
+            setReportTargetHotspotId(hotspotId || selectedHotspot?.hotspot_id || null);
+            setIsReportModalOpen(true);
+          }}
         />
 
-        {/* 6. CHẾ ĐỘ CHỈ ĐƯỜNG TRỰC QUAN KIỂU GOOGLE MAPS DIRECTIONS */}
+        {/* 6. CHẾ ĐỘ CHỈ ĐƯỜNG & LIVE TRACK GPS KIỂU GOOGLE MAPS NAVIGATION */}
         <RoutePlannerDrawer
           isOpen={isRouteDrawerOpen}
           onClose={() => setIsRouteDrawerOpen(false)}
@@ -540,20 +632,32 @@ export default function OceanFloodHomePage() {
             setActiveRoutePlan(null);
             setRouteOrigin(null);
             setRouteDestination(null);
+            setLiveTrackState({
+              isActive: false,
+              currentCoord: null,
+              bearingDeg: 0,
+              progressPct: 0,
+              followCamera: false,
+            });
           }}
           initialOrigin={routeOrigin}
           initialDestination={routeDestination}
+          onLiveTrackChange={(state) => setLiveTrackState(state)}
+          onOpenCameraReport={() => {
+            setReportTargetHotspotId(null);
+            setIsReportModalOpen(true);
+          }}
         />
 
-        {/* 7. HỘP THOẠI BÁO NGẬP KIỂM SOÁT 5 LỚP */}
+        {/* 7. HỘP THOẠI CHỤP ẢNH BÁO NGẬP KIỂM SOÁT 5 LỚP */}
         <CrowdReportModal
           isOpen={isReportModalOpen}
           onClose={() => setIsReportModalOpen(false)}
           deviceHash={deviceHash}
-          defaultHotspotId={selectedHotspot?.hotspot_id || null}
+          defaultHotspotId={reportTargetHotspotId || selectedHotspot?.hotspot_id || null}
           onReportAccepted={() => {
             fetchAlertsData();
-            showToast('🎉 Đã cập nhật báo cáo ngập lên bản đồ!');
+            showToast('🎉 Đã cập nhật ảnh & báo cáo ngập lên bản đồ!');
           }}
         />
 

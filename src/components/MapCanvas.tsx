@@ -18,6 +18,7 @@ import type {
   RoutePlanResponseOutput,
   RouteWaypointInput,
 } from '@/lib/routing-engine';
+import type { LiveTrackState } from '@/components/RoutePlannerDrawer';
 
 export interface MapCanvasProps {
   features: AlertGeoJsonFeature[];
@@ -35,6 +36,7 @@ export interface MapCanvasProps {
   userGpsLocation: [number, number] | null;
   showLegend: boolean;
   onCloseLegend: () => void;
+  liveTrackState?: LiveTrackState;
 }
 
 /**
@@ -62,10 +64,12 @@ export default function MapCanvas({
   userGpsLocation,
   showLegend,
   onCloseLegend,
+  liveTrackState,
 }: MapCanvasProps) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markersRef = useRef<maplibregl.Marker[]>([]);
+  const liveTrackerMarkerRef = useRef<maplibregl.Marker | null>(null);
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [currentZoom, setCurrentZoom] = useState<number>(11.8);
   const [selectedCameraPopover, setSelectedCameraPopover] =
@@ -683,6 +687,63 @@ export default function MapCanvas({
     onSelectHotspot,
     onSelectCrowdReport,
   ]);
+
+  // 4. Hiệu ứng Xe Di Chuyển Thực Tế (Google Maps Live Track GPS Puck + Auto Camera Follow)
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !isMapLoaded) return;
+
+    if (!liveTrackState?.isActive || !liveTrackState.currentCoord) {
+      if (liveTrackerMarkerRef.current) {
+        liveTrackerMarkerRef.current.remove();
+        liveTrackerMarkerRef.current = null;
+      }
+      return;
+    }
+
+    const [lng, lat] = liveTrackState.currentCoord;
+    const vehEmoji = vehicleType === 'car' ? '🚗' : '🏍️';
+
+    if (!liveTrackerMarkerRef.current) {
+      const puckEl = document.createElement('div');
+      puckEl.className = 'pointer-events-none z-40';
+      liveTrackerMarkerRef.current = new maplibregl.Marker({
+        element: puckEl,
+        anchor: 'center',
+      })
+        .setLngLat([lng, lat])
+        .addTo(map);
+    }
+
+    const markerEl = liveTrackerMarkerRef.current.getElement();
+    markerEl.innerHTML = `
+      <div class="relative flex flex-col items-center">
+        <div class="mb-1 px-2 py-0.5 rounded-full bg-[#0F9D58] text-white font-extrabold text-[10px] shadow-md border border-white whitespace-nowrap">
+          ${vehEmoji} Đang đi (${liveTrackState.progressPct}%)
+        </div>
+        <div class="relative w-11 h-11 flex items-center justify-center">
+          <span class="absolute inset-0 rounded-full bg-blue-500/35 animate-ping"></span>
+          <div
+            class="w-9 h-9 rounded-full bg-[#1A73E8] border-[3px] border-white shadow-[0_4px_16px_rgba(26,115,232,0.75)] flex items-center justify-center text-white font-black text-base transition-transform duration-300"
+            style="transform: rotate(${Math.round(liveTrackState.bearingDeg)}deg);"
+          >
+            ▲
+          </div>
+        </div>
+      </div>
+    `;
+
+    liveTrackerMarkerRef.current.setLngLat([lng, lat]);
+
+    if (liveTrackState.followCamera) {
+      map.easeTo({
+        center: [lng, lat],
+        zoom: Math.max(map.getZoom(), 14.8),
+        duration: 650,
+        essential: true,
+      });
+    }
+  }, [liveTrackState, vehicleType, isMapLoaded]);
 
   return (
     <div className="relative w-full h-full overflow-hidden">
