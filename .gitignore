@@ -13,6 +13,9 @@ __pycache__/
 venv/
 
 # Build & Tạm thời
+.next/
+out/
+next-env.d.ts
 dist/
 build/
 .cache/
