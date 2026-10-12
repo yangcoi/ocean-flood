@@ -1,0 +1,20 @@
+{
+  "name": "Ocean Flood — Bản đồ Cảnh báo Ngập & Lộ trình Tránh ngập TP.HCM",
+  "short_name": "Ocean Flood",
+  "description": "Dự báo ngập sớm 1–3h, cảnh báo ngôn ngữ kép cho Xe máy & Ô tô, báo cáo cộng đồng 5 lớp tại TP.HCM (Bình Thạnh, Q7, Q8, Thủ Đức).",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0B0F19",
+  "theme_color": "#3B82F6",
+  "lang": "vi",
+  "categories": ["navigation", "weather", "utilities"],
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

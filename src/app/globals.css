@@ -1,0 +1,125 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import 'maplibre-gl/dist/maplibre-gl.css';
+
+/* ==========================================================================
+   LibreUIUX Global Design System Tokens — Ocean Flood (docs/05-design-spec.md)
+   High-Contrast Outdoor Sunlight Mode & Night Rain Anti-Glare Mode
+   ========================================================================== */
+:root {
+  /* Brand & Action Tokens */
+  --color-primary: #3B82F6;
+  --color-primary-hover: #2563EB;
+  --color-accent: #8B5CF6;
+
+  /* Flood Severity Tokens (PRD Section 4 & Cartography Spec) */
+  --flood-level-0-normal: #10B981;
+  --flood-level-1-watch: #F59E0B;
+  --flood-level-2-warning: #F97316;
+  --flood-level-2-carto: #EA580C;
+  --flood-level-3-critical: #EF4444;
+  --flood-level-3-carto: #DC2626;
+
+  /* Routing Symbology Tokens (Cartography Spec Section 3.1) */
+  --route-motorbike: #0284C7;
+  --route-car: #2563EB;
+  --route-danger-flooded: #EF4444;
+  --camera-ttgt-bg: #312E81;
+  --camera-ttgt-highlight: #06B6D4;
+
+  /* Surface & Glassmorphism — Outdoor Sunlight Mode (Light) */
+  --surface-canvas-light: #F8FAFC;
+  --surface-glass-light: rgba(255, 255, 255, 0.88);
+  --text-primary-light: #0F172A;
+  --text-secondary-light: #475569;
+
+  /* Surface & Glassmorphism — Night Rain Mode (Dark) */
+  --surface-canvas-dark: #0B0F19;
+  --surface-glass-dark: rgba(15, 23, 42, 0.86);
+  --text-primary-dark: #F8FAFC;
+  --text-secondary-dark: #94A3B8;
+
+  /* Active Theme Defaults (Light Mode by default, toggled via .dark class) */
+  --surface-canvas: var(--surface-canvas-light);
+  --surface-glass: var(--surface-glass-light);
+  --text-primary: var(--text-primary-light);
+  --text-secondary: var(--text-secondary-light);
+
+  /* Typography Tokens (Vietnamese Diacritics Optimized) */
+  --font-sans: 'Be Vietnam Pro', 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --text-hero-metric: 1.5rem;
+  --text-title-lg: 1.125rem;
+  --text-body-plain: 1rem;
+  --text-body-sci: 0.875rem;
+  --text-meta-trust: 0.75rem;
+
+  /* Wet-Finger Ergonomics & Touch Targets (LibreUIUX) */
+  --touch-target-min: 48px;
+  --touch-target-wet-cta: 56px;
+  --touch-gap-min: 12px;
+  --space-grid: 4px;
+  --safe-area-bottom: max(16px, env(safe-area-inset-bottom));
+  --glass-blur: blur(12px);
+  --radius-sheet: 20px 20px 0 0;
+  --radius-pill: 9999px;
+}
+
+.dark {
+  --surface-canvas: var(--surface-canvas-dark);
+  --surface-glass: var(--surface-glass-dark);
+  --text-primary: var(--text-primary-dark);
+  --text-secondary: var(--text-secondary-dark);
+}
+
+@layer base {
+  html,
+  body {
+    height: 100dvh;
+    width: 100vw;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background-color: var(--surface-canvas);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    touch-action: manipulation;
+  }
+}
+
+@layer components {
+  /* Glassmorphic Floating Pill / Sheet Surface */
+  .libre-glass {
+    background-color: var(--surface-glass);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+  }
+
+  /* Wet-Finger Minimum Touch Target (48x48px) */
+  .wet-touch-target {
+    min-width: var(--touch-target-min);
+    min-height: var(--touch-target-min);
+  }
+
+  /* Wet-Finger Primary CTA Target (56px height) */
+  .wet-cta-target {
+    min-height: var(--touch-target-wet-cta);
+  }
+
+  /* Monospace Tabular Numbers for Rainfall, Tide, and Depth Metrics */
+  .metric-mono {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* MapLibre Popup & Attribution Customization for Mobile Readability */
+.maplibregl-ctrl-attrib {
+  font-size: 10px !important;
+  opacity: 0.75;
+}
