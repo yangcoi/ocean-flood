@@ -19,6 +19,7 @@ import type {
   RouteWaypointInput,
 } from '@/lib/routing-engine';
 import type { LiveTrackState } from '@/components/RoutePlannerDrawer';
+import type { ActiveCameraTarget } from '@/components/SecurityCameraModal';
 
 export interface MapCanvasProps {
   features: AlertGeoJsonFeature[];
@@ -37,6 +38,8 @@ export interface MapCanvasProps {
   showLegend: boolean;
   onCloseLegend: () => void;
   liveTrackState?: LiveTrackState;
+  onOpenSecurityCamera?: (camera: ActiveCameraTarget) => void;
+  focusCoordinates?: [number, number] | null;
 }
 
 /**
@@ -65,6 +68,8 @@ export default function MapCanvas({
   showLegend,
   onCloseLegend,
   liveTrackState,
+  onOpenSecurityCamera,
+  focusCoordinates,
 }: MapCanvasProps) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -72,8 +77,6 @@ export default function MapCanvas({
   const liveTrackerMarkerRef = useRef<maplibregl.Marker | null>(null);
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [currentZoom, setCurrentZoom] = useState<number>(11.8);
-  const [selectedCameraPopover, setSelectedCameraPopover] =
-    useState<TrafficCameraSeed | null>(null);
 
   // Xây dựng GeoJSON cho các đoạn đường ngập
   const buildSpatialLayersData = useCallback(() => {
@@ -637,22 +640,42 @@ export default function MapCanvas({
       markersRef.current.push(marker);
     });
 
-    // 2. Render Camera TTGT chỉ khi phóng to hoặc khi chọn điểm ngập
+    // 2. Render Camera An ninh / Giao thông (Ấn vào là phóng thẳng tới đúng nút giao và mở trình xem Camera tại chỗ)
     cameras.forEach((cam) => {
       const isHighlighted = selectedHotspot?.nearby_camera?.id === cam.id;
-      if (!isDetailedZoom && !isHighlighted) return;
 
       const el = document.createElement('button');
       el.type = 'button';
-      el.className = 'w-8 h-8 flex items-center justify-center focus:outline-none';
+      el.setAttribute('aria-label', `Mở Camera tại ${cam.camera_name}`);
+      el.className = 'w-9 h-9 flex items-center justify-center focus:outline-none group';
       el.innerHTML = `
-        <span class="w-6 h-6 rounded-full bg-slate-900 text-white text-[11px] flex items-center justify-center shadow-md border-2 border-white">
-          📹
+        <span class="px-1.5 py-0.5 rounded-full bg-slate-900 text-white text-[10px] font-bold flex items-center gap-0.5 shadow-md border-2 ${
+          isHighlighted ? 'border-amber-400 scale-125 ring-4 ring-amber-400/40' : 'border-white'
+        } group-hover:scale-110 transition-transform">
+          <span>📹</span>
+          ${isDetailedZoom || isHighlighted ? `<span class="text-[9px] text-amber-300">CAM</span>` : ''}
         </span>
       `;
       el.addEventListener('click', (ev) => {
         ev.stopPropagation();
-        setSelectedCameraPopover(cam);
+        map.flyTo({
+          center: cam.location.coordinates,
+          zoom: 17.0,
+          duration: 650,
+          essential: true,
+        });
+        const relatedFeature = features.find(
+          (f) => f.properties.hotspot_id === cam.associated_hotspot_id
+        );
+        onOpenSecurityCamera?.({
+          id: cam.id,
+          name: cam.camera_name,
+          coordinates: cam.location.coordinates,
+          distance_to_hotspot_m: cam.distance_to_hotspot_m,
+          ttgt_reference_note: cam.ttgt_reference_note,
+          street_name: relatedFeature?.properties.street_name,
+          estimated_depth_cm: relatedFeature?.properties.estimated_depth_cm,
+        });
       });
 
       const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
@@ -686,7 +709,20 @@ export default function MapCanvas({
     currentZoom,
     onSelectHotspot,
     onSelectCrowdReport,
+    onOpenSecurityCamera,
   ]);
+
+  // Phóng thẳng bản đồ tới tọa độ Camera khi người dùng bấm chọn
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !isMapLoaded || !focusCoordinates) return;
+    map.flyTo({
+      center: focusCoordinates,
+      zoom: 17.2,
+      duration: 750,
+      essential: true,
+    });
+  }, [focusCoordinates, isMapLoaded]);
 
   // 4. Hiệu ứng Xe Di Chuyển Thực Tế (Google Maps Live Track GPS Puck + Auto Camera Follow)
   useEffect(() => {
@@ -752,46 +788,6 @@ export default function MapCanvas({
         className="w-full h-full"
         aria-label="Bản đồ cảnh báo ngập TP.HCM"
       />
-
-      {/* Popover Camera TTGT */}
-      {selectedCameraPopover && (
-        <div
-          role="dialog"
-          className="absolute inset-x-3 bottom-24 z-30 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl p-3.5 space-y-2"
-        >
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <span className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0">
-                <Video className="w-4 h-4" />
-              </span>
-              <div>
-                <h3 className="text-xs font-bold text-slate-900 dark:text-white">
-                  {selectedCameraPopover.camera_name}
-                </h3>
-                <span className="text-[11px] text-slate-500">
-                  Cách điểm ngập {selectedCameraPopover.distance_to_hotspot_m}m
-                </span>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setSelectedCameraPopover(null)}
-              className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-          <a
-            href="http://giaothong.hochiminhcity.gov.vn/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full py-2 rounded-xl bg-[#1A73E8] text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow"
-          >
-            <ExternalLink className="w-3.5 h-3.5" />
-            <span>Mở Cổng Camera Giao Thông TP.HCM</span>
-          </a>
-        </div>
-      )}
 
       {/* Bảng Chú giải gọn gàng kiểu Google Maps Layers */}
       {showLegend && (

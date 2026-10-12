@@ -19,6 +19,7 @@ import {
 import type { HotspotForecastProperties } from '@/lib/forecast-engine';
 import type { CrowdReportClusterRecord } from '@/lib/verification-engine';
 import type { VehicleType } from '@/lib/routing-engine';
+import type { ActiveCameraTarget } from '@/components/SecurityCameraModal';
 
 export interface AlertBottomSheetProps {
   selectedHotspot: HotspotForecastProperties | null;
@@ -29,6 +30,7 @@ export interface AlertBottomSheetProps {
   onRefreshAlerts: () => void;
   onOpenRouteToAvoid: (hotspot: HotspotForecastProperties) => void;
   onOpenCameraReport: (hotspotId?: string) => void;
+  onOpenSecurityCamera: (camera: ActiveCameraTarget) => void;
 }
 
 /**
@@ -155,6 +157,7 @@ export default function AlertBottomSheet({
   onRefreshAlerts,
   onOpenRouteToAvoid,
   onOpenCameraReport,
+  onOpenSecurityCamera,
 }: AlertBottomSheetProps) {
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
   const [isVoting, setIsVoting] = useState(false);
@@ -361,34 +364,59 @@ export default function AlertBottomSheet({
         </div>
       </div>
 
-      {/* 4. CAMERA GIAO THÔNG TTGT GẦN NHẤT (HIỂN THỊ TRỰC TIẾP) */}
+      {/* 4. CAMERA AN NINH / GIAO THÔNG GẦN NHẤT (ẤN VÀO TRỎ THẲNG TỚI ĐÚNG ĐỊA ĐIỂM NÚT GIAO) */}
       {h.nearby_camera && (
-        <div className="p-3 rounded-2xl bg-slate-900 text-white flex items-center justify-between gap-2.5 shadow-sm">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-9 h-9 rounded-xl bg-blue-600/30 border border-blue-400/40 flex items-center justify-center shrink-0">
-              <Video className="w-4 h-4 text-blue-300" />
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-1.5">
-                <span className="px-1.5 py-0.2 rounded bg-red-600 text-[9px] font-extrabold uppercase">
-                  LIVE CAM
-                </span>
-                <span className="text-xs font-bold truncate">{h.nearby_camera.name}</span>
+        <div className="p-3 rounded-2xl bg-slate-900 text-white space-y-2 shadow-sm border border-slate-800">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-9 h-9 rounded-xl bg-red-600/25 border border-red-500/40 flex items-center justify-center shrink-0">
+                <Video className="w-4 h-4 text-red-400" />
               </div>
-              <p className="text-[11px] text-slate-300 truncate">
-                Cách điểm ngập {h.nearby_camera.distance_to_hotspot_m}m • Đối chiếu mắt thường
-              </p>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="px-1.5 py-0.2 rounded bg-red-600 text-[9px] font-extrabold uppercase">
+                    ● LIVE CAM ({h.nearby_camera.id})
+                  </span>
+                  <span className="text-xs font-bold truncate">{h.nearby_camera.name}</span>
+                </div>
+                <p className="text-[11px] text-slate-300 font-mono truncate">
+                  📍 Tọa độ: {h.nearby_camera.coordinates[1].toFixed(4)}°N,{' '}
+                  {h.nearby_camera.coordinates[0].toFixed(4)}°E (Cách {h.nearby_camera.distance_to_hotspot_m}m)
+                </p>
+              </div>
             </div>
           </div>
-          <a
-            href="http://giaothong.hochiminhcity.gov.vn/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-3 py-2 rounded-xl bg-[#1A73E8] hover:bg-blue-500 text-white font-bold text-xs flex items-center gap-1 shrink-0 shadow"
-          >
-            <span>Xem Cam</span>
-            <ExternalLink className="w-3.5 h-3.5" />
-          </a>
+
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() =>
+                onOpenSecurityCamera({
+                  id: h.nearby_camera!.id,
+                  name: h.nearby_camera!.name,
+                  coordinates: h.nearby_camera!.coordinates,
+                  distance_to_hotspot_m: h.nearby_camera!.distance_to_hotspot_m,
+                  ttgt_reference_note: h.nearby_camera!.ttgt_reference_note,
+                  street_name: h.street_name,
+                  estimated_depth_cm: h.estimated_depth_cm,
+                })
+              }
+              className="py-2 px-3 rounded-xl bg-[#1A73E8] hover:bg-blue-600 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 shadow transition active:scale-95"
+            >
+              <Video className="w-3.5 h-3.5" />
+              <span>Mở Cam tại Nút giao</span>
+            </button>
+
+            <a
+              href={`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${h.nearby_camera.coordinates[1]},${h.nearby_camera.coordinates[0]}&heading=20&pitch=0&fov=80`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="py-2 px-3 rounded-xl bg-[#0F9D58] hover:bg-[#0B8043] text-white font-extrabold text-xs flex items-center justify-center gap-1.5 shadow transition active:scale-95"
+            >
+              <span>👀 Góc nhìn 360° tại chỗ</span>
+              <ExternalLink className="w-3 h-3" />
+            </a>
+          </div>
         </div>
       )}
 

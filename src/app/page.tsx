@@ -22,6 +22,9 @@ import RoutePlannerDrawer, {
   type LiveTrackState,
 } from '@/components/RoutePlannerDrawer';
 import CrowdReportModal from '@/components/CrowdReportModal';
+import SecurityCameraModal, {
+  type ActiveCameraTarget,
+} from '@/components/SecurityCameraModal';
 
 import type { HcmMvpDistrict, TrafficCameraSeed } from '@/data/hcm-spatial-seed';
 import type {
@@ -89,6 +92,9 @@ export default function OceanFloodHomePage() {
 
   const [isReportModalOpen, setIsReportModalOpen] = useState<boolean>(false);
   const [reportTargetHotspotId, setReportTargetHotspotId] = useState<string | null>(null);
+  const [activeSecurityCamera, setActiveSecurityCamera] =
+    useState<ActiveCameraTarget | null>(null);
+  const [focusCoordinates, setFocusCoordinates] = useState<[number, number] | null>(null);
   const [showLegend, setShowLegend] = useState<boolean>(false);
   const [showFloodStrip, setShowFloodStrip] = useState<boolean>(true);
 
@@ -430,6 +436,11 @@ export default function OceanFloodHomePage() {
           showLegend={showLegend}
           onCloseLegend={() => setShowLegend(false)}
           liveTrackState={liveTrackState}
+          focusCoordinates={focusCoordinates}
+          onOpenSecurityCamera={(cam) => {
+            setFocusCoordinates(cam.coordinates);
+            setActiveSecurityCamera(cam);
+          }}
         />
 
         {/* 3. NÚT ĐỊNH VỊ GPS & CHÚ GIẢI BÊN PHẢI */}
@@ -605,6 +616,10 @@ export default function OceanFloodHomePage() {
             setReportTargetHotspotId(hotspotId || selectedHotspot?.hotspot_id || null);
             setIsReportModalOpen(true);
           }}
+          onOpenSecurityCamera={(cam) => {
+            setFocusCoordinates(cam.coordinates);
+            setActiveSecurityCamera(cam);
+          }}
         />
 
         {/* 6. CHẾ ĐỘ CHỈ ĐƯỜNG & LIVE TRACK GPS KIỂU GOOGLE MAPS NAVIGATION */}
@@ -659,6 +674,13 @@ export default function OceanFloodHomePage() {
             fetchAlertsData();
             showToast('🎉 Đã cập nhật ảnh & báo cáo ngập lên bản đồ!');
           }}
+        />
+
+        {/* 7.5. TRÌNH XEM CAMERA AN NINH / GIAO THÔNG TRỎ THẲNG VÀO ĐÚNG TỌA ĐỘ NÚT GIAO */}
+        <SecurityCameraModal
+          camera={activeSecurityCamera}
+          onClose={() => setActiveSecurityCamera(null)}
+          onFlyToCamera={(coords) => setFocusCoordinates([...coords])}
         />
 
         {/* 8. MODAL ĐỒNG Ý GPS */}
