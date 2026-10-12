@@ -274,47 +274,47 @@ export default function AlertBottomSheet({
   return (
     <section
       aria-label="Chi tiết Cảnh báo Ngập Ngôn ngữ Kép"
-      className="absolute inset-x-0 bottom-0 z-30 w-full libre-glass rounded-t-sheet border-t border-slate-900/15 dark:border-white/20 shadow-2xl transition-all duration-200 max-h-[82%] flex flex-col"
+      className="absolute inset-x-0 bottom-0 z-30 w-full libre-glass rounded-t-sheet border-t border-slate-900/15 dark:border-white/20 shadow-[0_-16px_48px_rgba(0,0,0,0.55)] transition-all duration-200 max-h-[84%] flex flex-col"
       style={{
-        fontSize: isCarMode ? '112%' : '100%',
+        fontSize: isCarMode ? '108%' : '100%',
       }}
     >
       {/* Thanh kéo + Header */}
-      <div className="px-4 pt-2.5 pb-2 border-b border-slate-200/80 dark:border-slate-800 flex flex-col gap-1.5 shrink-0">
-        <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600 mx-auto mb-0.5" />
+      <div className="px-3.5 pt-2.5 pb-2 border-b border-slate-200/80 dark:border-slate-800/90 flex flex-col gap-1.5 shrink-0">
+        <div className="w-10 h-1 rounded-full bg-slate-300 dark:bg-slate-600 mx-auto mb-0.5" />
 
         <div className="flex items-start justify-between gap-2">
           <div className="flex flex-wrap items-center gap-1.5">
             {/* Huy hiệu Cấp độ ngập */}
             <span
-              className={`px-2.5 py-1 rounded-full text-xs font-extrabold tracking-tight border ${sevBadge.bg}`}
+              className={`px-2.5 py-0.5 rounded-full text-[11px] font-extrabold tracking-tight border ${sevBadge.bg}`}
             >
               {sevBadge.text}
             </span>
 
             {/* Huy hiệu Độ tin cậy: Đã xác minh vs Dự báo 1-3h vs Chờ xác minh */}
             {verificationStatus === 'VERIFIED' ? (
-              <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-blue-600 text-white flex items-center gap-1 shadow-sm">
-                <CheckCircle2 className="w-3.5 h-3.5" />
+              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-600 text-white flex items-center gap-1 shadow-sm">
+                <CheckCircle2 className="w-3 h-3 shrink-0" />
                 <span>
-                  Đã xác minh {confirmCount > 0 ? `• ${confirmCount} người báo` : 'đa nguồn'}
+                  Đã xác minh {confirmCount > 0 ? `• ${confirmCount} người` : 'đa nguồn'}
                 </span>
               </span>
             ) : verificationStatus === 'UNVERIFIED' ? (
-              <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/40 flex items-center gap-1">
-                <AlertTriangle className="w-3.5 h-3.5" />
-                <span>Chờ xác minh • {confirmCount}/3 người báo</span>
+              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/40 flex items-center gap-1">
+                <AlertTriangle className="w-3 h-3 shrink-0" />
+                <span>Chờ xác minh ({confirmCount}/3)</span>
               </span>
             ) : (
-              <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-violet-600 text-white flex items-center gap-1 shadow-sm">
-                <Clock className="w-3.5 h-3.5" />
-                <span>Dự báo trước 1–3h (Mưa + Triều)</span>
+              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-violet-600 text-white flex items-center gap-1 shadow-sm">
+                <Clock className="w-3 h-3 shrink-0" />
+                <span>Dự báo 1–3h</span>
               </span>
             )}
 
             {isCarMode && (
-              <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30">
-                🚗 Cỡ chữ Taplo +12%
+              <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30">
+                Taplo Ô tô
               </span>
             )}
           </div>
@@ -331,130 +331,132 @@ export default function AlertBottomSheet({
         </div>
 
         {/* Tên tuyến đường ngập */}
-        <h2
-          className={`font-bold text-slate-900 dark:text-white leading-snug ${
-            isCarMode ? 'text-xl' : 'text-lg'
-          }`}
-        >
+        <h2 className="text-base font-extrabold text-slate-900 dark:text-white leading-snug">
           {title}
         </h2>
 
         {/* Thời điểm cập nhật & Thời hạn tự hạ cấp (Rule 7) */}
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-600 dark:text-slate-400">
+        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[11px] text-slate-600 dark:text-slate-400">
           <span className="font-medium">
-            🕒 Cập nhật:{' '}
+            Cập nhật:{' '}
             <strong className="text-slate-800 dark:text-slate-200">
               {minutesAgo <= 1 ? 'Vừa xong' : `${minutesAgo} phút trước`}
             </strong>{' '}
             ({new Date(updatedAtIso).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })})
           </span>
           <span>•</span>
-          <span>⏳ Tự hạ cấp sau: {remainingTtlMin} phút</span>
+          <span className="metric-mono">Tự hạ cấp: {remainingTtlMin}p</span>
         </div>
 
         {/* Cảnh báo dữ liệu cũ nếu > 90 phút */}
         {isStaleData && (
-          <div className="mt-1 p-2 rounded-xl bg-amber-500/20 border border-amber-500/50 text-xs font-semibold text-amber-800 dark:text-amber-200">
-            🕒 Cập nhật cách đây hơn 90 phút. Nước có thể đã rút hoặc thay đổi — thông tin chỉ mang tính tham khảo.
+          <div className="mt-1 p-2 rounded-xl bg-amber-500/20 border border-amber-500/50 text-[11px] font-semibold text-amber-800 dark:text-amber-200">
+            Cập nhật cách đây hơn 90 phút. Nước có thể đã rút hoặc thay đổi — thông tin chỉ mang tính tham khảo.
           </div>
         )}
       </div>
 
       {/* Nội dung cuộn bên trong */}
-      <div className="px-4 py-3 overflow-y-auto space-y-3">
-        {/* DÒNG 1: THÔNG SỐ KHOA HỌC (4 BADGE MONOSPACE) */}
+      <div className="px-3.5 py-3 overflow-y-auto space-y-3">
+        {/* DÒNG 1: THÔNG SỐ KHOA HỌC (4 BADGE MONOSPACE CÂN ĐỐI TRONG KHUNG 430PX) */}
         <div>
-          <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5 flex items-center justify-between">
-            <span>Dòng 1 — Thông số Khoa học (Khí tượng & Thủy văn)</span>
-            <span className="metric-mono text-blue-600 dark:text-blue-400">Độ tin cậy {floodProbPct}%</span>
+          <div className="text-[10.5px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5 flex items-center justify-between">
+            <span>Dòng 1 — Thông số Thủy văn</span>
+            <span className="metric-mono text-blue-600 dark:text-blue-400">
+              Độ tin cậy {floodProbPct}%
+            </span>
           </div>
-          <div className="grid grid-cols-4 gap-1.5 p-2 rounded-2xl bg-slate-100/95 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700">
-            <div className="flex flex-col items-center justify-center p-1.5 rounded-xl bg-white dark:bg-slate-900/80 border border-slate-200/60 dark:border-slate-700/60">
-              <span className="text-[11px] text-slate-500 dark:text-slate-400">🌧️ Lượng mưa</span>
-              <span className="metric-mono font-bold text-sm sm:text-base text-slate-900 dark:text-white">
+          <div className="grid grid-cols-4 gap-1.5 p-1.5 rounded-2xl bg-slate-100/95 dark:bg-slate-900/90 border border-slate-200 dark:border-white/10">
+            <div className="flex flex-col items-center justify-center py-1.5 px-1 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-200/60 dark:border-white/5">
+              <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">
+                Mưa 1–3h
+              </span>
+              <span className="metric-mono font-extrabold text-xs text-slate-900 dark:text-white mt-0.5">
                 {rainMmH}mm/h
               </span>
             </div>
 
-            <div className="flex flex-col items-center justify-center p-1.5 rounded-xl bg-white dark:bg-slate-900/80 border border-slate-200/60 dark:border-slate-700/60">
-              <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                🌊 Triều ({tideTime})
+            <div className="flex flex-col items-center justify-center py-1.5 px-1 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-200/60 dark:border-white/5">
+              <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">
+                Triều ({tideTime})
               </span>
-              <span className="metric-mono font-bold text-sm sm:text-base text-slate-900 dark:text-white">
-                {tideM.toFixed(2)}m
+              <span className="metric-mono font-extrabold text-xs text-slate-900 dark:text-white mt-0.5">
+                +{tideM.toFixed(2)}m
               </span>
             </div>
 
-            <div className="flex flex-col items-center justify-center p-1.5 rounded-xl bg-white dark:bg-slate-900/80 border border-slate-200/60 dark:border-slate-700/60">
-              <span className="text-[11px] text-slate-500 dark:text-slate-400">📊 Xác suất</span>
-              <span className="metric-mono font-bold text-sm sm:text-base text-violet-700 dark:text-violet-300">
+            <div className="flex flex-col items-center justify-center py-1.5 px-1 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-200/60 dark:border-white/5">
+              <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">
+                Xác suất
+              </span>
+              <span className="metric-mono font-extrabold text-xs text-violet-700 dark:text-violet-300 mt-0.5">
                 {floodProbPct}%
               </span>
             </div>
 
             <div
-              className={`flex flex-col items-center justify-center p-1.5 rounded-xl border-2 ${sevBadge.depthBox}`}
+              className={`flex flex-col items-center justify-center py-1.5 px-1 rounded-xl border ${sevBadge.depthBox}`}
             >
-              <span className="text-[11px] font-semibold">📏 Độ sâu</span>
-              <span className="metric-mono font-extrabold text-base sm:text-lg">
+              <span className="text-[10px] font-bold">Độ sâu</span>
+              <span className="metric-mono font-extrabold text-sm mt-0.5">
                 ~{estimatedDepthCm}cm
               </span>
             </div>
           </div>
-          <p className="mt-1.5 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+          <p className="mt-1.5 text-[11.5px] text-slate-600 dark:text-slate-300 leading-relaxed">
             {scientificSummary}
           </p>
         </div>
 
         {/* DÒNG 2: NGÔN NGỮ ĐỜI THƯỜNG (HIGHLIGHT THEO LOẠI XE ĐANG CHỌN) */}
         <div className="space-y-2">
-          <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-            Dòng 2 — Lời khuyên Đời thường (Tự động ưu tiên theo phương tiện đang chọn)
+          <div className="text-[10.5px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            Dòng 2 — Khuyến nghị thực tế theo phương tiện
           </div>
 
           {vehicleType === 'motorcycle' ? (
             <>
               {/* Đang chọn Xe máy -> Nổi bật thẻ Xe máy */}
-              <div className="p-3.5 rounded-2xl bg-orange-500/15 dark:bg-orange-500/20 border-l-4 border-[#F97316] ring-1 ring-orange-500/30 shadow-sm">
+              <div className="p-3 rounded-2xl bg-orange-500/15 dark:bg-orange-500/20 border-l-4 border-[#F97316] ring-1 ring-orange-500/30 shadow-sm">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-extrabold uppercase tracking-wide text-orange-800 dark:text-orange-300 flex items-center gap-1.5">
-                    <span>🏍️ Đang chọn: Xe máy (Ngưỡng ống pô ≥ 20cm)</span>
+                  <span className="text-[11px] font-extrabold uppercase tracking-wide text-orange-800 dark:text-orange-300">
+                    🏍️ Xe máy (Ngưỡng ống pô ≥ 20cm)
                   </span>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-600 text-white">
-                    Ưu tiên hiển thị
+                  <span className="px-2 py-0.5 rounded-full text-[9.5px] font-bold bg-orange-600 text-white">
+                    Đang chọn
                   </span>
                 </div>
-                <p className="text-base sm:text-lg font-semibold text-slate-900 dark:text-white leading-snug">
+                <p className="text-sm font-bold text-slate-900 dark:text-white leading-snug">
                   {motorbikeAdvice}
                 </p>
               </div>
 
               {/* Thẻ tham khảo phụ cho Ô tô */}
-              <div className="p-2.5 rounded-xl bg-slate-100/80 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/70 text-xs text-slate-600 dark:text-slate-400">
-                <strong className="text-slate-800 dark:text-slate-200">🚗 Với Ô tô (Tham khảo):</strong>{' '}
+              <div className="p-2.5 rounded-xl bg-slate-100/80 dark:bg-slate-900/70 border border-slate-200 dark:border-white/10 text-[11.5px] text-slate-600 dark:text-slate-400 leading-snug">
+                <strong className="text-slate-800 dark:text-slate-200">🚗 Với Ô tô:</strong>{' '}
                 {carAdvice}
               </div>
             </>
           ) : (
             <>
-              {/* Đang chọn Ô tô -> Nổi bật thẻ Ô tô & phóng chữ +12% */}
-              <div className="p-3.5 rounded-2xl bg-blue-500/15 dark:bg-blue-500/20 border-l-4 border-[#2563EB] ring-1 ring-blue-500/30 shadow-sm">
+              {/* Đang chọn Ô tô -> Nổi bật thẻ Ô tô */}
+              <div className="p-3 rounded-2xl bg-blue-500/15 dark:bg-blue-500/20 border-l-4 border-[#2563EB] ring-1 ring-blue-500/30 shadow-sm">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-extrabold uppercase tracking-wide text-blue-800 dark:text-blue-300 flex items-center gap-1.5">
-                    <span>🚗 Đang chọn: Ô tô (Ngưỡng gầm Sedan ≥ 25cm)</span>
+                  <span className="text-[11px] font-extrabold uppercase tracking-wide text-blue-800 dark:text-blue-300">
+                    🚗 Ô tô (Ngưỡng gầm Sedan ≥ 25cm)
                   </span>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-600 text-white">
-                    Chế độ Taplo +12%
+                  <span className="px-2 py-0.5 rounded-full text-[9.5px] font-bold bg-blue-600 text-white">
+                    Đang chọn
                   </span>
                 </div>
-                <p className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white leading-snug">
+                <p className="text-sm font-bold text-slate-900 dark:text-white leading-snug">
                   {carAdvice}
                 </p>
               </div>
 
               {/* Thẻ tham khảo phụ cho Xe máy */}
-              <div className="p-2.5 rounded-xl bg-slate-100/80 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/70 text-xs text-slate-600 dark:text-slate-400">
-                <strong className="text-slate-800 dark:text-slate-200">🏍️ Với Xe máy (Tham khảo):</strong>{' '}
+              <div className="p-2.5 rounded-xl bg-slate-100/80 dark:bg-slate-900/70 border border-slate-200 dark:border-white/10 text-[11.5px] text-slate-600 dark:text-slate-400 leading-snug">
+                <strong className="text-slate-800 dark:text-slate-200">🏍️ Với Xe máy:</strong>{' '}
                 {motorbikeAdvice}
               </div>
             </>
@@ -462,7 +464,7 @@ export default function AlertBottomSheet({
         </div>
 
         {/* Nguồn dữ liệu bắt buộc (Rule 7) */}
-        <div className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs flex items-start gap-2">
+        <div className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-900/80 border border-slate-200 dark:border-white/10 text-[11px] flex items-start gap-2">
           <ShieldCheck className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
           <div>
             <span className="font-bold text-slate-800 dark:text-slate-200">Nguồn dữ liệu: </span>
@@ -470,30 +472,32 @@ export default function AlertBottomSheet({
           </div>
         </div>
 
-        {/* NÚT BẤM MỞ RỘNG 1 CHẠM (TRÁNH PHẢI VUỐT KHI TAY ƯỚT - WALKTHROUGH F1.2) */}
+        {/* NÚT BẤM MỞ RỘNG 1 CHẠM (KHÔNG LẶP ICON) */}
         <button
           type="button"
           onClick={() => setIsExpanded((prev) => !prev)}
-          className="wet-touch-target w-full px-4 py-2.5 rounded-2xl bg-violet-500/15 hover:bg-violet-500/25 border border-violet-500/40 text-violet-900 dark:text-violet-200 font-bold text-sm flex items-center justify-between transition"
+          className="wet-touch-target w-full px-3.5 py-2 rounded-2xl bg-violet-500/15 hover:bg-violet-500/25 border border-violet-500/35 text-violet-900 dark:text-violet-200 font-bold text-xs flex items-center justify-between transition"
         >
           <span className="flex items-center gap-2">
-            <BarChart3 className="w-4 h-4 text-violet-600 dark:text-violet-400" />
-            <span>📊 Xem dự báo 6h tới & Camera TTGT gần nhất</span>
+            <BarChart3 className="w-4 h-4 text-violet-600 dark:text-violet-400 shrink-0" />
+            <span>Xem diễn biến 6h tới &amp; Camera TTGT gần nhất</span>
           </span>
-          {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+          {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
         </button>
 
         {/* KHỐI MỞ RỘNG: TIMELINE KHUNG GIỜ HAY NGẬP & CAMERA TTGT GẦN NHẤT */}
         {isExpanded && (
-          <div className="space-y-3 pt-1 animate-in fade-in duration-150">
+          <div className="space-y-2.5 pt-0.5 animate-in fade-in duration-150">
             {/* Biểu đồ Timeline 6h tới */}
-            <div className="p-3 rounded-2xl bg-slate-100/90 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 space-y-2">
+            <div className="p-3 rounded-2xl bg-slate-100/90 dark:bg-slate-900/90 border border-slate-200 dark:border-white/10 space-y-2">
               <div className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center justify-between">
-                <span>🕒 Dự báo diễn biến mực nước ngập 6 giờ tới</span>
-                <span className="text-[11px] font-normal text-slate-500">Đỉnh triều: {tideTime}</span>
+                <span>Dự báo mực nước ngập 6 giờ tới</span>
+                <span className="text-[10.5px] font-medium text-slate-500 metric-mono">
+                  Đỉnh triều: {tideTime}
+                </span>
               </div>
 
-              <div className="grid grid-cols-6 gap-1.5 pt-1">
+              <div className="grid grid-cols-6 gap-1 pt-0.5">
                 {timelineSlots.map((slot) => {
                   const barColor =
                     slot.level === 3
@@ -506,23 +510,23 @@ export default function AlertBottomSheet({
                   return (
                     <div
                       key={slot.hour}
-                      className="flex flex-col items-center justify-end p-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-700/70 text-center"
+                      className="flex flex-col items-center justify-end p-1 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/70 dark:border-white/10 text-center"
                     >
                       <span
-                        className={`px-1.5 py-0.5 rounded-md text-[11px] font-bold metric-mono mb-1 w-full ${barColor}`}
+                        className={`px-1 py-0.5 rounded-md text-[10px] font-extrabold metric-mono mb-1 w-full ${barColor}`}
                       >
                         ~{slot.depth}cm
                       </span>
-                      <span className="text-[10px] font-semibold text-slate-600 dark:text-slate-400">
-                        {slot.hour}
+                      <span className="text-[9.5px] font-semibold text-slate-600 dark:text-slate-400 leading-tight">
+                        {slot.hour.split(' ')[0]}
                       </span>
                     </div>
                   );
                 })}
               </div>
 
-              <p className="text-xs text-slate-700 dark:text-slate-300 bg-white/70 dark:bg-slate-900/60 p-2 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
-                💡 <strong>Quy luật điểm đen lịch sử:</strong> {typicalTimeline}
+              <p className="text-[11px] text-slate-700 dark:text-slate-300 bg-white/70 dark:bg-slate-800/60 p-2 rounded-xl border border-slate-200/60 dark:border-white/5 leading-relaxed">
+                <strong>Quy luật điểm đen lịch sử:</strong> {typicalTimeline}
               </p>
             </div>
 
@@ -530,39 +534,39 @@ export default function AlertBottomSheet({
             {nearbyCamera && (
               <div className="p-3 rounded-2xl bg-indigo-950/10 dark:bg-indigo-950/40 border border-cyan-500/40 space-y-2">
                 <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="w-7 h-7 rounded-full bg-[#312E81] text-white flex items-center justify-center ring-2 ring-cyan-400 text-xs">
-                      📹
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="w-8 h-8 rounded-xl bg-[#312E81] text-cyan-300 flex items-center justify-center ring-1 ring-cyan-400 shrink-0">
+                      <Video className="w-4 h-4" />
                     </span>
-                    <div>
-                      <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                    <div className="min-w-0">
+                      <h4 className="text-xs font-extrabold text-slate-900 dark:text-white truncate">
                         {nearbyCamera.name}
                       </h4>
-                      <p className="text-[11px] text-cyan-700 dark:text-cyan-300 font-semibold metric-mono">
-                        Cách tâm ngập {nearbyCamera.distance_to_hotspot_m}m (Trong bán kính &lt;300m)
+                      <p className="text-[10.5px] text-cyan-700 dark:text-cyan-300 font-semibold metric-mono">
+                        Cách tâm ngập {nearbyCamera.distance_to_hotspot_m}m (&lt;300m)
                       </p>
                     </div>
                   </div>
                   <button
                     type="button"
                     onClick={() => setShowCameraBox((prev) => !prev)}
-                    className="px-2.5 py-1.5 rounded-xl bg-cyan-500/20 text-cyan-800 dark:text-cyan-200 text-xs font-bold"
+                    className="px-2.5 py-1 rounded-xl bg-cyan-500/20 text-cyan-800 dark:text-cyan-200 text-[11px] font-bold shrink-0"
                   >
-                    {showCameraBox ? 'Thu gọn' : 'Hướng dẫn xem'}
+                    {showCameraBox ? 'Thu gọn' : 'Chi tiết'}
                   </button>
                 </div>
 
-                <p className="text-xs text-slate-700 dark:text-slate-300">
+                <p className="text-[11.5px] text-slate-700 dark:text-slate-300 leading-relaxed">
                   {nearbyCamera.ttgt_reference_note}
                 </p>
 
                 <button
                   type="button"
                   onClick={handleOpenExternalTtgt}
-                  className="wet-touch-target w-full px-3 py-2 rounded-xl bg-[#312E81] hover:bg-indigo-800 text-white text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 shadow transition"
+                  className="wet-touch-target w-full px-3 py-2 rounded-xl bg-[#312E81] hover:bg-indigo-800 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow transition"
                 >
-                  <ExternalLink className="w-4 h-4 text-cyan-300" />
-                  <span>↗ Mở Cổng TTGT TP.HCM chính thức (Tab mới - Tự giữ lộ trình)</span>
+                  <ExternalLink className="w-3.5 h-3.5 text-cyan-300 shrink-0" />
+                  <span>Mở Cổng TTGT TP.HCM đối chiếu trực tiếp</span>
                 </button>
               </div>
             )}
@@ -577,36 +581,17 @@ export default function AlertBottomSheet({
           </div>
         )}
 
-        {/* THANH HÀNH ĐỘNG DƯỚI ĐÁY THẺ: XÁC NHẬN CHÉO NHANH (+1 Đúng, đang ngập / Nước đã rút) & TÌM ĐƯỜNG TRÁNH */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1 pb-2">
-          <button
-            type="button"
-            disabled={isSubmittingVote}
-            onClick={() => handleQuickActionVote('CONFIRM_UPVOTE')}
-            className="wet-touch-target px-3 py-2.5 rounded-2xl bg-orange-600 hover:bg-orange-500 active:scale-[0.99] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-md transition disabled:opacity-50"
-          >
-            <ThumbsUp className="w-4 h-4 shrink-0" />
-            <span>+1 Đúng, đang ngập</span>
-          </button>
-
-          <button
-            type="button"
-            disabled={isSubmittingVote}
-            onClick={() => handleQuickActionVote('REPORT_RECEDED')}
-            className="wet-touch-target px-3 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 active:scale-[0.99] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-md transition disabled:opacity-50"
-          >
-            <CheckCircle2 className="w-4 h-4 shrink-0" />
-            <span>✅ Nước đã rút</span>
-          </button>
-
+        {/* THANH HÀNH ĐỘNG DƯỚI ĐÁY THẺ: PHÂN CẤP THỊ GIÁC RÕ RÀNG TRONG KHUNG 430PX */}
+        <div className="space-y-2 pt-1 pb-1">
+          {/* Hàng 1: Hành động chính — Tìm lộ trình né điểm ngập này */}
           {selectedHotspot ? (
             <button
               type="button"
               onClick={() => onOpenRouteToAvoid(selectedHotspot)}
-              className="wet-touch-target px-3 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-500 active:scale-[0.99] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-md transition"
+              className="wet-touch-target w-full px-4 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-500 active:scale-[0.99] text-white font-extrabold text-xs flex items-center justify-center gap-2 shadow-lg shadow-blue-600/25 transition"
             >
               <Navigation className="w-4 h-4 shrink-0" />
-              <span>Tìm đường né đoạn này</span>
+              <span>Tìm lộ trình né đoạn ngập này</span>
             </button>
           ) : (
             <button
@@ -615,12 +600,35 @@ export default function AlertBottomSheet({
                 setIsExpanded(true);
                 setShowCameraBox(true);
               }}
-              className="wet-touch-target px-3 py-2.5 rounded-2xl bg-[#312E81] hover:bg-indigo-800 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-md transition"
+              className="wet-touch-target w-full px-4 py-2.5 rounded-2xl bg-[#312E81] hover:bg-indigo-800 text-white font-extrabold text-xs flex items-center justify-center gap-2 shadow-md transition"
             >
               <Video className="w-4 h-4 shrink-0 text-cyan-300" />
-              <span>Đối chiếu Cam TTGT</span>
+              <span>Đối chiếu Camera TTGT gần nhất</span>
             </button>
           )}
+
+          {/* Hàng 2: 2 Nút Xác nhận cộng đồng tại hiện trường (Gestalt Proximity & Similarity) */}
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              disabled={isSubmittingVote}
+              onClick={() => handleQuickActionVote('CONFIRM_UPVOTE')}
+              className="wet-touch-target px-3 py-2 rounded-2xl bg-orange-600/90 hover:bg-orange-500 active:scale-[0.99] text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow transition disabled:opacity-50"
+            >
+              <ThumbsUp className="w-3.5 h-3.5 shrink-0" />
+              <span>Đúng, còn ngập (+1)</span>
+            </button>
+
+            <button
+              type="button"
+              disabled={isSubmittingVote}
+              onClick={() => handleQuickActionVote('REPORT_RECEDED')}
+              className="wet-touch-target px-3 py-2 rounded-2xl bg-emerald-600/90 hover:bg-emerald-500 active:scale-[0.99] text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow transition disabled:opacity-50"
+            >
+              <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+              <span>Nước đã rút (0cm)</span>
+            </button>
+          </div>
         </div>
       </div>
     </section>

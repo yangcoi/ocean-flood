@@ -4,17 +4,21 @@ import React, { useState } from 'react';
 import {
   CloudRain,
   Waves,
-  MapPin,
   Sun,
   Moon,
   SlidersHorizontal,
   Info,
-  Clock,
   ChevronDown,
   ShieldAlert,
+  Sparkles,
+  Check,
 } from 'lucide-react';
 import type { HcmMvpDistrict } from '@/data/hcm-spatial-seed';
-import type { ForecastScenario, TideStationStatus, DistrictRainForecast } from '@/lib/forecast-engine';
+import type {
+  ForecastScenario,
+  TideStationStatus,
+  DistrictRainForecast,
+} from '@/lib/forecast-engine';
 
 export interface TopStatusBarProps {
   scenario: ForecastScenario;
@@ -33,12 +37,17 @@ export interface TopStatusBarProps {
   isLoading: boolean;
 }
 
-const DISTRICTS: { value: HcmMvpDistrict | 'ALL'; label: string; shortLabel: string }[] = [
-  { value: 'ALL', label: 'Toàn bộ 4 Quận MVP', shortLabel: '4 Quận MVP' },
-  { value: 'Bình Thạnh', label: 'Quận Bình Thạnh', shortLabel: 'Bình Thạnh' },
-  { value: 'Quận 7', label: 'Quận 7', shortLabel: 'Quận 7' },
-  { value: 'Quận 8', label: 'Quận 8', shortLabel: 'Quận 8' },
-  { value: 'TP. Thủ Đức', label: 'TP. Thủ Đức', shortLabel: 'Thủ Đức' },
+const DISTRICTS: {
+  value: HcmMvpDistrict | 'ALL';
+  label: string;
+  shortLabel: string;
+  count: number;
+}[] = [
+  { value: 'ALL', label: 'Toàn bộ 4 Quận MVP', shortLabel: 'Tất cả (18)', count: 18 },
+  { value: 'Bình Thạnh', label: 'Quận Bình Thạnh', shortLabel: 'Bình Thạnh', count: 6 },
+  { value: 'Quận 7', label: 'Quận 7', shortLabel: 'Quận 7', count: 4 },
+  { value: 'Quận 8', label: 'Quận 8', shortLabel: 'Quận 8', count: 4 },
+  { value: 'TP. Thủ Đức', label: 'TP. Thủ Đức', shortLabel: 'Thủ Đức', count: 4 },
 ];
 
 const SCENARIOS: {
@@ -50,26 +59,26 @@ const SCENARIOS: {
   {
     value: 'peak_tide_rain',
     label: 'Đỉnh triều + Mưa lớn 17h30',
-    shortBadge: '🌊 Đỉnh triều + Mưa 17h30',
-    desc: 'Kịch bản cao điểm: Triều Phú An 1.68m (BĐ3) trùng mưa lớn 35–48mm/h giờ tan tầm.',
+    shortBadge: 'Đỉnh triều + Mưa',
+    desc: 'Cao điểm: Triều Phú An 1.68m (BĐ3) trùng mưa lớn 38–48mm/h giờ tan tầm.',
   },
   {
     value: 'live',
     label: 'Thực tế Live (Open-Meteo)',
-    shortBadge: '🟢 Thực tế Live',
-    desc: 'Gọi trực tiếp API thời tiết Open-Meteo & chu kỳ thủy triều thực tế tại TP.HCM.',
+    shortBadge: 'Thực tế Live',
+    desc: 'Dữ liệu thực tế từ API Open-Meteo & chu kỳ bán nhật triều Sông Sài Gòn.',
   },
   {
     value: 'heavy_rain_only',
     label: 'Mưa lớn cục bộ (Triều thấp)',
-    shortBadge: '🌧️ Mưa lớn cục bộ',
-    desc: 'Mưa dông nhiệt 40–52mm/h gây ngập các rốn trũng dốc (Thủ Đức, Bình Thạnh), triều <1.40m.',
+    shortBadge: 'Mưa cục bộ',
+    desc: 'Mưa dông nhiệt 40–52mm/h gây ngập rốn trũng dốc, mực triều <1.40m.',
   },
   {
     value: 'dry_safe',
     label: 'Trời nắng ráo (Ít rủi ro)',
-    shortBadge: '☀️ Trời nắng ráo',
-    desc: 'Không mưa (0–3mm/h), mực nước triều ổn định dưới Báo động 1.',
+    shortBadge: 'Nắng ráo',
+    desc: 'Không mưa (0–3mm/h), mực nước triều ổn định dưới mức Báo động 1.',
   },
 ];
 
@@ -90,10 +99,10 @@ export default function TopStatusBar({
   isLoading,
 }: TopStatusBarProps) {
   const [showSourceInfo, setShowSourceInfo] = useState(false);
+  const [showScenarioMenu, setShowScenarioMenu] = useState(false);
 
-  // Tính lượng mưa đại diện cho quận đang chọn (hoặc cao nhất trong 4 quận)
   const displayRainMmH = React.useMemo(() => {
-    if (!districtRainfall) return 38;
+    if (!districtRainfall) return 48;
     if (selectedDistrict !== 'ALL' && districtRainfall[selectedDistrict]) {
       return districtRainfall[selectedDistrict].peak_rain_1_3h_mm_h;
     }
@@ -104,40 +113,67 @@ export default function TopStatusBar({
   const peakTideM = tidePhuAn?.peak_level_m ?? 1.68;
   const peakTideTime = tidePhuAn?.peak_time ?? '17:30';
 
+  const getRainSeverity = (mm: number) => {
+    if (mm >= 40) {
+      return {
+        tag: 'Mưa rất to',
+        colorClass: 'text-orange-500 dark:text-orange-400',
+        pillClass:
+          'bg-orange-500/15 text-orange-700 dark:text-orange-300 border-orange-500/30',
+      };
+    }
+    if (mm >= 20) {
+      return {
+        tag: 'Mưa lớn',
+        colorClass: 'text-amber-500 dark:text-amber-400',
+        pillClass:
+          'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30',
+      };
+    }
+    return {
+      tag: 'Mưa nhỏ / Tạnh',
+      colorClass: 'text-emerald-500 dark:text-emerald-400',
+      pillClass:
+        'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
+    };
+  };
+
   const getTideBadgeStyle = (level: number) => {
     if (level >= 1.6) {
       return {
         label: 'BĐ3',
         dotColor: 'bg-red-500',
-        badgeClass:
-          'bg-red-500/15 text-red-700 dark:text-red-300 border-red-500/40',
+        pillClass: 'bg-red-500/15 text-red-700 dark:text-red-300 border-red-500/30',
       };
     }
     if (level >= 1.5) {
       return {
         label: 'BĐ2',
         dotColor: 'bg-orange-500',
-        badgeClass:
-          'bg-orange-500/15 text-orange-700 dark:text-orange-300 border-orange-500/40',
+        pillClass:
+          'bg-orange-500/15 text-orange-700 dark:text-orange-300 border-orange-500/30',
       };
     }
     if (level >= 1.4) {
       return {
         label: 'BĐ1',
         dotColor: 'bg-amber-500',
-        badgeClass:
-          'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/40',
+        pillClass:
+          'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30',
       };
     }
     return {
       label: '<BĐ1',
       dotColor: 'bg-emerald-500',
-      badgeClass:
-        'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/40',
+      pillClass:
+        'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
     };
   };
 
+  const rainMeta = getRainSeverity(displayRainMmH);
   const tideStyle = getTideBadgeStyle(peakTideM);
+  const currentScenarioObj =
+    SCENARIOS.find((s) => s.value === scenario) || SCENARIOS[0];
 
   const formattedTime = React.useMemo(() => {
     if (!updatedAt) return 'Vừa xong';
@@ -151,53 +187,62 @@ export default function TopStatusBar({
 
   return (
     <header
-      className="absolute top-2 inset-x-2 z-20 flex flex-col gap-1.5 pointer-events-none"
+      className="absolute top-2.5 inset-x-2.5 z-20 flex flex-col gap-1.5 pointer-events-none"
       aria-label="Thanh trạng thái Khí tượng Thủy văn và Điều khiển Kịch bản"
     >
-      {/* Dòng 1 & 2 gọn gàng chuẩn Mobile-First O1 */}
-      <div className="pointer-events-auto libre-glass rounded-2xl border border-slate-900/10 dark:border-white/15 shadow-lg p-2 flex flex-col gap-1.5">
-        {/* Hàng 1: Chỉ số Mưa + Đỉnh triều Phú An + Nút Nguồn + Nút Sáng/Tối */}
-        <div className="flex items-center justify-between gap-1">
-          <div className="flex items-center gap-1 flex-wrap">
-            {/* Lượng mưa */}
-            <div
-              className={`flex items-center gap-1 px-2 py-1 rounded-xl border text-[11px] font-bold metric-mono ${
-                displayRainMmH >= 30
-                  ? 'bg-orange-500/15 text-orange-700 dark:text-orange-300 border-orange-500/40'
-                  : displayRainMmH >= 10
-                    ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/40'
-                    : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/40'
-              }`}
-              title="Lượng mưa dự báo lớn nhất trong 1–3h tới"
-            >
-              <CloudRain className="w-3.5 h-3.5 shrink-0" />
-              <span>{displayRainMmH}mm/h</span>
+      {/* KHỐI CHÍNH: HUD KÍNH MỜ PHÂN CẤP THỊ GIÁC CHUẨN LIBREUIUX */}
+      <div className="pointer-events-auto libre-glass rounded-[22px] border border-slate-200/80 dark:border-white/12 shadow-[0_12px_36px_rgba(0,0,0,0.35)] p-2.5 flex flex-col gap-2">
+        {/* Hàng 1: Thương hiệu Ocean Flood + Bộ chọn kịch bản Pill + Thông tin nguồn + Đổi Sáng/Tối */}
+        <div className="flex items-center justify-between gap-1.5">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-blue-500 to-violet-600 text-white flex items-center justify-center shadow-sm shrink-0">
+              <Waves className="w-4 h-4" />
             </div>
-
-            {/* Đỉnh triều Phú An */}
-            <div
-              className={`flex items-center gap-1 px-2 py-1 rounded-xl border text-[11px] font-bold metric-mono ${tideStyle.badgeClass}`}
-              title={`Trạm Phú An (Sông Sài Gòn) — Đỉnh triều lúc ${peakTideTime}`}
-            >
-              <span className={`w-1.5 h-1.5 rounded-full ${tideStyle.dotColor} animate-pulse`} />
-              <Waves className="w-3.5 h-3.5 shrink-0" />
-              <span>
-                Phú An {peakTideM.toFixed(2)}m ({tideStyle.label})
-              </span>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-extrabold tracking-tight text-slate-900 dark:text-white truncate">
+                  Ocean Flood
+                </span>
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-red-500/15 border border-red-500/30 text-[10px] font-bold text-red-600 dark:text-red-300">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping" />
+                  {highRiskCount} điểm ngập
+                </span>
+              </div>
             </div>
           </div>
 
           <div className="flex items-center gap-1 shrink-0">
-            {/* Nút bấm xem chi tiết nguồn & thời gian cập nhật */}
+            {/* Nút mở menu Kịch bản Thời tiết & Triều cường (Thay thế <select> thô) */}
             <button
               type="button"
-              onClick={() => setShowSourceInfo((prev) => !prev)}
-              className="h-8 px-2 rounded-xl bg-slate-200/70 dark:bg-slate-800/80 hover:bg-slate-300/70 dark:hover:bg-slate-700 text-[11px] font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1 transition"
-              title="Chạm để xem chi tiết nguồn dữ liệu KTTV & Open-Meteo"
+              onClick={() => {
+                setShowScenarioMenu((prev) => !prev);
+                setShowSourceInfo(false);
+              }}
+              className="h-7 px-2.5 rounded-xl bg-violet-500/15 hover:bg-violet-500/25 border border-violet-500/35 text-[11px] font-bold text-violet-700 dark:text-violet-200 flex items-center gap-1 transition active:scale-95"
+              title="Chuyển kịch bản kiểm thử dự báo ngập 1–3h"
             >
-              <Clock className="w-3 h-3 text-blue-600 dark:text-blue-400 shrink-0" />
-              <span className="metric-mono">{isLoading ? '...' : formattedTime}</span>
-              <Info className="w-3 h-3 opacity-75" />
+              <SlidersHorizontal className="w-3 h-3 text-violet-500 dark:text-violet-300 shrink-0" />
+              <span className="truncate max-w-[105px]">{currentScenarioObj.shortBadge}</span>
+              <ChevronDown className="w-3 h-3 opacity-75 shrink-0" />
+            </button>
+
+            {/* Nút xem Nguồn dữ liệu & Thời gian */}
+            <button
+              type="button"
+              onClick={() => {
+                setShowSourceInfo((prev) => !prev);
+                setShowScenarioMenu(false);
+              }}
+              aria-label="Xem thông tin nguồn dữ liệu KTTV"
+              className={`h-7 w-7 rounded-xl flex items-center justify-center border transition ${
+                showSourceInfo
+                  ? 'bg-blue-600 text-white border-blue-400'
+                  : 'bg-slate-100 dark:bg-slate-800/90 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+              }`}
+              title={`Cập nhật lúc ${formattedTime} — Chạm để xem nguồn dữ liệu`}
+            >
+              <Info className="w-3.5 h-3.5" />
             </button>
 
             {/* Nút chuyển đổi giao diện Sáng / Tối */}
@@ -206,103 +251,191 @@ export default function TopStatusBar({
               onClick={onToggleDarkMode}
               aria-label={
                 isDarkMode
-                  ? 'Chuyển sang Chế độ Ban ngày Ngoài trời nắng (Light Mode)'
-                  : 'Chuyển sang Chế độ Ban đêm Mưa lớn (Night Rain Dark Mode)'
+                  ? 'Chuyển sang Giao diện Sáng (Ban ngày ngoài nắng)'
+                  : 'Chuyển sang Giao diện Tối (Ban đêm mưa lớn)'
               }
-              className="h-8 w-8 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-amber-300 transition shadow-sm"
+              className="h-7 w-7 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800/90 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-amber-300 transition"
             >
               {isDarkMode ? (
-                <Moon className="w-4 h-4 text-amber-300" />
+                <Moon className="w-3.5 h-3.5 text-amber-300" />
               ) : (
-                <Sun className="w-4 h-4 text-amber-500" />
+                <Sun className="w-3.5 h-3.5 text-amber-500" />
               )}
             </button>
           </div>
         </div>
 
-        {/* Hàng 2: Chọn nhanh 4 Quận + Kịch bản Kiểm thử (2 cột đều nhau trên Mobile) */}
+        {/* Hàng 2: 2 Thẻ Chỉ Số Khoa Học Đối Xứng (Mưa dự báo 1–3h & Đỉnh triều Phú An) — Gestalt Similarity */}
         <div className="grid grid-cols-2 gap-1.5">
-          {/* Chọn nhanh 4 Quận */}
-          <div className="relative flex items-center">
-            <MapPin className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 absolute left-2.5 pointer-events-none" />
-            <select
-              aria-label="Chọn nhanh Quận trọng điểm"
-              value={selectedDistrict}
-              onChange={(e) => onDistrictChange(e.target.value as HcmMvpDistrict | 'ALL')}
-              className="w-full h-9 pl-7 pr-6 rounded-xl bg-slate-100 dark:bg-slate-800/95 border border-slate-300 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-slate-100 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 truncate"
+          {/* Thẻ 1: Lượng mưa dự báo 1-3h */}
+          <div className="px-2.5 py-1.5 rounded-xl bg-slate-100/90 dark:bg-slate-900/75 border border-slate-200/80 dark:border-white/8 flex items-center justify-between gap-1.5">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <div className="w-6 h-6 rounded-lg bg-orange-500/15 border border-orange-500/30 flex items-center justify-center shrink-0">
+                <CloudRain className="w-3.5 h-3.5 text-orange-500 dark:text-orange-400" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-[10px] font-medium text-slate-500 dark:text-slate-400 leading-none">
+                  Mưa dự báo 1–3h
+                </div>
+                <div className="text-xs font-extrabold text-slate-900 dark:text-white metric-mono leading-tight mt-0.5">
+                  {displayRainMmH} mm/h
+                </div>
+              </div>
+            </div>
+            <span
+              className={`px-1.5 py-0.5 rounded-md border text-[9.5px] font-bold shrink-0 ${rainMeta.pillClass}`}
             >
-              {DISTRICTS.map((d) => (
-                <option key={d.value} value={d.value}>
-                  {d.shortLabel}
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="w-3.5 h-3.5 text-slate-500 absolute right-2 pointer-events-none" />
+              {rainMeta.tag}
+            </span>
           </div>
 
-          {/* Bộ chuyển kịch bản kiểm thử thực tế */}
-          <div className="relative flex items-center">
-            <SlidersHorizontal className="w-3.5 h-3.5 text-violet-600 dark:text-violet-400 absolute left-2.5 pointer-events-none" />
-            <select
-              aria-label="Chọn kịch bản thời tiết & triều cường kiểm thử"
-              value={scenario}
-              onChange={(e) => onScenarioChange(e.target.value as ForecastScenario)}
-              className="w-full h-9 pl-7 pr-6 rounded-xl bg-violet-500/10 dark:bg-violet-500/20 border border-violet-500/40 text-xs font-bold text-violet-900 dark:text-violet-200 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-violet-500 truncate"
+          {/* Thẻ 2: Đỉnh triều trạm Phú An */}
+          <div className="px-2.5 py-1.5 rounded-xl bg-slate-100/90 dark:bg-slate-900/75 border border-slate-200/80 dark:border-white/8 flex items-center justify-between gap-1.5">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <div className="w-6 h-6 rounded-lg bg-red-500/15 border border-red-500/30 flex items-center justify-center shrink-0">
+                <Waves className="w-3.5 h-3.5 text-red-500 dark:text-red-400" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-[10px] font-medium text-slate-500 dark:text-slate-400 leading-none">
+                  Triều Phú An ({peakTideTime})
+                </div>
+                <div className="text-xs font-extrabold text-slate-900 dark:text-white metric-mono leading-tight mt-0.5">
+                  +{peakTideM.toFixed(2)}m
+                </div>
+              </div>
+            </div>
+            <span
+              className={`px-1.5 py-0.5 rounded-md border text-[9.5px] font-bold shrink-0 flex items-center gap-1 ${tideStyle.pillClass}`}
             >
-              {SCENARIOS.map((sc) => (
-                <option
-                  key={sc.value}
-                  value={sc.value}
-                  className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"
-                >
-                  {sc.shortBadge}
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="w-3.5 h-3.5 text-violet-500 absolute right-2 pointer-events-none" />
+              <span className={`w-1.5 h-1.5 rounded-full ${tideStyle.dotColor} animate-pulse`} />
+              {tideStyle.label}
+            </span>
           </div>
+        </div>
+
+        {/* Hàng 3: Thanh Pill Chọn Nhanh 4 Quận MVP (Cuộn ngang mượt, chuẩn Apple Maps, không dùng <select>) */}
+        <div
+          className="flex items-center gap-1 overflow-x-auto no-scrollbar pt-0.5"
+          role="tablist"
+          aria-label="Lọc nhanh theo Quận trọng điểm"
+        >
+          {DISTRICTS.map((d) => {
+            const isActive = selectedDistrict === d.value;
+            return (
+              <button
+                key={d.value}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                onClick={() => onDistrictChange(d.value)}
+                className={`px-2.5 py-1 rounded-xl text-[11px] font-bold whitespace-nowrap transition-all shrink-0 ${
+                  isActive
+                    ? 'bg-blue-600 text-white shadow-sm shadow-blue-600/30'
+                    : 'bg-slate-100/80 dark:bg-slate-800/75 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                }`}
+              >
+                {d.shortLabel}
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* Popover giải thích chi tiết Nguồn dữ liệu & Độ tin cậy khi người dùng bấm vào giờ cập nhật */}
-      {showSourceInfo && (
-        <div className="pointer-events-auto libre-glass rounded-2xl border border-slate-300 dark:border-slate-700 shadow-xl p-3 text-xs space-y-1.5 animate-in fade-in duration-150">
-          <div className="flex items-center justify-between font-bold text-slate-900 dark:text-white">
-            <span className="flex items-center gap-1.5">
-              <ShieldAlert className="w-4 h-4 text-blue-500" />
-              Minh bạch Nguồn Dữ Liệu & Độ Tươi (Chuẩn Rule 7)
+      {/* POPOVER CHỌN KỊCH BẢN THỜI TIẾT & TRIỀU CƯỜNG */}
+      {showScenarioMenu && (
+        <div className="pointer-events-auto libre-glass rounded-2xl border border-violet-500/35 shadow-2xl p-2.5 space-y-1.5 animate-in fade-in duration-150">
+          <div className="flex items-center justify-between px-1 pb-1 border-b border-slate-200 dark:border-slate-800">
+            <span className="text-[11px] font-extrabold text-violet-700 dark:text-violet-300 flex items-center gap-1">
+              <Sparkles className="w-3.5 h-3.5" />
+              Giả lập Kịch bản Dự báo Mưa &amp; Triều (1–3h)
             </span>
             <button
               type="button"
-              onClick={() => setShowSourceInfo(false)}
-              className="px-2 py-1 rounded-lg bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold"
+              onClick={() => setShowScenarioMenu(false)}
+              className="text-[11px] font-bold text-slate-500 hover:text-slate-800 dark:hover:text-white px-1.5"
             >
               Đóng ✕
             </button>
           </div>
-          <p className="text-slate-700 dark:text-slate-300">
-            • <strong>Nguồn khí tượng & thủy văn:</strong> {weatherSourceLabel}
-          </p>
-          <p className="text-slate-700 dark:text-slate-300">
-            • <strong>Trạm Phú An (Sông Sài Gòn):</strong> Hiện tại{' '}
-            <span className="metric-mono font-bold">{tidePhuAn?.current_level_m ?? 1.62}m</span> |
-            Đỉnh triều{' '}
-            <span className="metric-mono font-bold">{tidePhuAn?.peak_level_m ?? 1.68}m</span> lúc{' '}
-            <span className="metric-mono font-bold">{tidePhuAn?.peak_time ?? '17:30'}</span> (
-            {tidePhuAn?.alert_stage})
-          </p>
-          <p className="text-slate-700 dark:text-slate-300">
-            • <strong>Trạm Nhà Bè (Kênh Đồng Điền):</strong> Đỉnh triều{' '}
-            <span className="metric-mono font-bold">{tideNhaBe?.peak_level_m ?? 1.7}m</span> lúc{' '}
-            <span className="metric-mono font-bold">{tideNhaBe?.peak_time ?? '17:15'}</span> •{' '}
-            <strong>Điểm ngập nguy hiểm (Cấp 2–3):</strong>{' '}
-            <span className="metric-mono font-bold text-red-500">{highRiskCount}/18 tuyến</span>
-          </p>
-          {isFallbackWeather && (
-            <p className="text-amber-600 dark:text-amber-400 font-semibold">
-              ⚠️ Lưu ý: Đang sử dụng bản tin dự phòng nội bộ do kết nối Open-Meteo chậm.
-            </p>
-          )}
+          <div className="grid grid-cols-1 gap-1">
+            {SCENARIOS.map((sc) => {
+              const active = scenario === sc.value;
+              return (
+                <button
+                  key={sc.value}
+                  type="button"
+                  onClick={() => {
+                    onScenarioChange(sc.value);
+                    setShowScenarioMenu(false);
+                  }}
+                  className={`w-full text-left px-3 py-2 rounded-xl border transition flex items-start justify-between gap-2 ${
+                    active
+                      ? 'bg-violet-600/20 border-violet-500 text-slate-900 dark:text-white'
+                      : 'bg-slate-100/60 dark:bg-slate-900/60 border-transparent hover:border-slate-300 dark:hover:border-slate-700 text-slate-700 dark:text-slate-300'
+                  }`}
+                >
+                  <div>
+                    <div className="text-xs font-extrabold">{sc.label}</div>
+                    <div className="text-[10.5px] opacity-80 leading-snug mt-0.5">
+                      {sc.desc}
+                    </div>
+                  </div>
+                  {active && (
+                    <span className="w-5 h-5 rounded-full bg-violet-600 text-white flex items-center justify-center shrink-0 mt-0.5">
+                      <Check className="w-3 h-3" />
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* POPOVER CHI TIẾT NGUỒN DỮ LIỆU KHÍ TƯỢNG THỦY VĂN */}
+      {showSourceInfo && (
+        <div
+          role="region"
+          aria-label="Chi tiết nguồn dữ liệu khí tượng thủy văn"
+          className="pointer-events-auto libre-glass rounded-2xl border border-slate-200 dark:border-white/15 shadow-2xl p-3 text-xs space-y-1.5 animate-in fade-in duration-150"
+        >
+          <div className="flex items-center justify-between gap-2">
+            <span className="font-extrabold text-slate-900 dark:text-white flex items-center gap-1.5">
+              <ShieldAlert className="w-4 h-4 text-blue-500 shrink-0" />
+              <span>Nguồn Dữ Liệu Thủy Văn &amp; Thời Gian Thực</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => setShowSourceInfo(false)}
+              className="px-2 py-0.5 rounded-lg bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-[11px]"
+            >
+              Đóng
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 gap-1 text-[11px] text-slate-600 dark:text-slate-300">
+            <div>
+              • <strong>Nguồn mưa:</strong> {weatherSourceLabel}{' '}
+              {isFallbackWeather ? '(Dự phòng Offline)' : `(Cập nhật lúc ${formattedTime})`}
+            </div>
+            <div>
+              • <strong>Trạm Phú An (Sông Sài Gòn):</strong> Hiện tại{' '}
+              <span className="metric-mono font-bold">
+                +{tidePhuAn?.current_level_m.toFixed(2) ?? '1.62'}m
+              </span>{' '}
+              • Đỉnh triều{' '}
+              <span className="metric-mono font-bold text-red-500 dark:text-red-400">
+                +{peakTideM.toFixed(2)}m lúc {peakTideTime}
+              </span>
+            </div>
+            <div>
+              • <strong>Trạm Nhà Bè (Kênh Đồng Điền):</strong> Đỉnh triều{' '}
+              <span className="metric-mono font-bold">
+                +{tideNhaBe?.peak_level_m.toFixed(2) ?? '1.70'}m lúc{' '}
+                {tideNhaBe?.peak_time ?? '17:45'}
+              </span>
+            </div>
+          </div>
         </div>
       )}
     </header>

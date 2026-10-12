@@ -38,52 +38,13 @@ export interface MapCanvasProps {
 }
 
 /**
- * Tạo MapLibre Style JSON chuẩn Desaturated Muted Basemap (docs/05-cartography.md)
- * Sử dụng Carto Light / Dark Matter giảm bão hòa màu để làm nổi bật 100% lớp ngập CVD-safe
+ * Sử dụng Vector Tile Style JSON chính thức miễn phí 100% của CARTO GL (không cần API key, không có watermark)
+ * Hiển thị đầy đủ tên đường tiếng Việt, sông Sài Gòn, kênh Tàu Hủ, kênh Tẻ, cầu và ranh giới quận sắc nét ở mọi mức zoom.
  */
-function createBasemapStyle(isDark: boolean): maplibregl.StyleSpecification {
-  const tiles = isDark
-    ? [
-        'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png',
-        'https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png',
-        'https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png',
-      ]
-    : [
-        'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
-        'https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
-        'https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
-      ];
-
-  return {
-    version: 8,
-    sources: {
-      'carto-basemap': {
-        type: 'raster',
-        tiles,
-        tileSize: 256,
-        attribution:
-          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-      },
-    },
-    layers: [
-      {
-        id: 'basemap-background',
-        type: 'background',
-        paint: {
-          'background-color': isDark ? '#0B0F19' : '#E2E8F0',
-        },
-      },
-      {
-        id: 'basemap-tiles',
-        type: 'raster',
-        source: 'carto-basemap',
-        paint: {
-          'raster-opacity': isDark ? 0.92 : 0.96,
-          'raster-contrast': 0.05,
-        },
-      },
-    ],
-  };
+function getVectorBasemapStyleUrl(isDark: boolean): string {
+  return isDark
+    ? 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json'
+    : 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json';
 }
 
 export default function MapCanvas({
@@ -107,6 +68,8 @@ export default function MapCanvas({
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markersRef = useRef<maplibregl.Marker[]>([]);
   const [isMapLoaded, setIsMapLoaded] = useState(false);
+  const [currentZoom, setCurrentZoom] = useState<number>(11.5);
+  const [showAllCameras, setShowAllCameras] = useState<boolean>(false);
   const [selectedCameraPopover, setSelectedCameraPopover] =
     useState<TrafficCameraSeed | null>(null);
 
@@ -119,7 +82,6 @@ export default function MapCanvas({
 
     features.forEach((f) => {
       const p = f.properties;
-      // Điều chỉnh màu sắc hiển thị theo ngưỡng phương tiện nếu cần nhấn mạnh cho Ô tô (>=25cm) vs Xe máy (>=20cm)
       let colorHex = '#10B981';
       if (p.severity_level === 3) colorHex = '#EF4444';
       else if (p.severity_level === 2) colorHex = '#F97316';
@@ -182,7 +144,7 @@ export default function MapCanvas({
     };
   }, [features]);
 
-  // Khởi tạo hoặc cập nhật các Source & Layer theo đúng thứ tự Z-Index (docs/05-cartography.md Mục 5)
+  // Khởi tạo hoặc cập nhật các Source & Layer theo đúng chuẩn Cartography Designer
   const syncMapSourcesAndLayers = useCallback(
     (map: maplibregl.Map) => {
       if (!map.isStyleLoaded()) return;
@@ -206,7 +168,7 @@ export default function MapCanvas({
           source: 'flood-forecast-polygons',
           paint: {
             'fill-color': ['get', 'color'],
-            'fill-opacity': 0.16,
+            'fill-opacity': 0.14,
           },
         });
         map.addLayer({
@@ -215,9 +177,9 @@ export default function MapCanvas({
           source: 'flood-forecast-polygons',
           paint: {
             'line-color': ['get', 'color'],
-            'line-width': 1.5,
+            'line-width': 1.2,
             'line-dasharray': [2, 2],
-            'line-opacity': 0.65,
+            'line-opacity': 0.55,
           },
         });
       } else {
@@ -238,7 +200,7 @@ export default function MapCanvas({
           source: 'flood-verified-polygons',
           paint: {
             'fill-color': ['get', 'color'],
-            'fill-opacity': 0.25,
+            'fill-opacity': 0.22,
           },
         });
       } else {
@@ -273,9 +235,9 @@ export default function MapCanvas({
           source: 'route-direct-flooded',
           layout: { 'line-cap': 'round', 'line-join': 'round' },
           paint: {
-            'line-color': '#64748B',
-            'line-width': 8,
-            'line-opacity': 0.65,
+            'line-color': '#475569',
+            'line-width': 7,
+            'line-opacity': 0.7,
           },
         });
         map.addLayer({
@@ -285,7 +247,7 @@ export default function MapCanvas({
           layout: { 'line-cap': 'round', 'line-join': 'round' },
           paint: {
             'line-color': '#EF4444',
-            'line-width': 5,
+            'line-width': 4.5,
             'line-dasharray': [2, 2],
             'line-opacity': 0.95,
           },
@@ -296,11 +258,23 @@ export default function MapCanvas({
         );
       }
 
-      // 4. Tuyến đường ngập Dự báo 1-3h (Nét đứt [4, 2])
+      // 4. Tuyến đường ngập Dự báo 1-3h (Hiệu ứng Glow + Nét đứt [3, 2])
       if (!map.getSource('flood-forecast-lines')) {
         map.addSource('flood-forecast-lines', {
           type: 'geojson',
           data: forecastLineFC,
+        });
+        map.addLayer({
+          id: 'layer-flood-forecast-glow',
+          type: 'line',
+          source: 'flood-forecast-lines',
+          layout: { 'line-cap': 'round', 'line-join': 'round' },
+          paint: {
+            'line-color': ['get', 'color'],
+            'line-width': 14,
+            'line-blur': 6,
+            'line-opacity': 0.35,
+          },
         });
         map.addLayer({
           id: 'layer-flood-forecast-casing',
@@ -309,7 +283,7 @@ export default function MapCanvas({
           layout: { 'line-cap': 'round', 'line-join': 'round' },
           paint: {
             'line-color': isDarkMode ? '#0F172A' : '#FFFFFF',
-            'line-width': 10,
+            'line-width': 8,
             'line-opacity': 0.85,
           },
         });
@@ -320,9 +294,9 @@ export default function MapCanvas({
           layout: { 'line-cap': 'round', 'line-join': 'round' },
           paint: {
             'line-color': ['get', 'color'],
-            'line-width': 6,
-            'line-dasharray': [3, 2],
-            'line-opacity': 0.9,
+            'line-width': 5,
+            'line-dasharray': [2.5, 1.5],
+            'line-opacity': 0.95,
           },
         });
       } else {
@@ -331,11 +305,31 @@ export default function MapCanvas({
         );
       }
 
-      // 5. Tuyến đường ngập Đã xác minh (Nét liền đặc 100% + Casing trắng)
+      // 5. Tuyến đường ngập Đã xác minh (Radar Neon Glow + Nét liền đặc 100%)
       if (!map.getSource('flood-verified-lines')) {
         map.addSource('flood-verified-lines', {
           type: 'geojson',
           data: verifiedLineFC,
+        });
+        map.addLayer({
+          id: 'layer-flood-verified-glow',
+          type: 'line',
+          source: 'flood-verified-lines',
+          layout: { 'line-cap': 'round', 'line-join': 'round' },
+          paint: {
+            'line-color': ['get', 'color'],
+            'line-width': [
+              'match',
+              ['get', 'severity_level'],
+              3,
+              20,
+              2,
+              16,
+              12,
+            ],
+            'line-blur': 7,
+            'line-opacity': 0.48,
+          },
         });
         map.addLayer({
           id: 'layer-flood-verified-casing',
@@ -348,10 +342,10 @@ export default function MapCanvas({
               'match',
               ['get', 'severity_level'],
               3,
-              14,
+              11,
               2,
-              12,
-              9,
+              9.5,
+              7.5,
             ],
             'line-opacity': 0.95,
           },
@@ -367,10 +361,10 @@ export default function MapCanvas({
               'match',
               ['get', 'severity_level'],
               3,
-              9,
+              7.5,
               2,
-              7,
-              5,
+              6,
+              4.5,
             ],
             'line-opacity': 1,
           },
@@ -381,8 +375,8 @@ export default function MapCanvas({
         );
       }
 
-      // 6. Lộ trình thay thế ít rủi ro ngập (route-alternative: #0284C7 cho Xe máy / #2563EB cho Ô tô)
-      const safeRouteColor = vehicleType === 'car' ? '#2563EB' : '#0284C7';
+      // 6. Lộ trình thay thế ít rủi ro ngập (route-alternative: #3B82F6 / #0EA5E9)
+      const safeRouteColor = vehicleType === 'car' ? '#3B82F6' : '#0EA5E9';
       const safeRouteFC: GeoJSON.FeatureCollection = activeRoutePlan
         ? {
             type: 'FeatureCollection',
@@ -404,13 +398,25 @@ export default function MapCanvas({
           data: safeRouteFC,
         });
         map.addLayer({
+          id: 'layer-route-safe-glow',
+          type: 'line',
+          source: 'route-safe-alternative',
+          layout: { 'line-cap': 'round', 'line-join': 'round' },
+          paint: {
+            'line-color': ['get', 'color'],
+            'line-width': 18,
+            'line-blur': 6,
+            'line-opacity': 0.45,
+          },
+        });
+        map.addLayer({
           id: 'layer-route-safe-casing',
           type: 'line',
           source: 'route-safe-alternative',
           layout: { 'line-cap': 'round', 'line-join': 'round' },
           paint: {
             'line-color': '#FFFFFF',
-            'line-width': vehicleType === 'car' ? 13 : 11,
+            'line-width': 10,
             'line-opacity': 0.95,
           },
         });
@@ -421,7 +427,7 @@ export default function MapCanvas({
           layout: { 'line-cap': 'round', 'line-join': 'round' },
           paint: {
             'line-color': ['get', 'color'],
-            'line-width': vehicleType === 'car' ? 8 : 6.5,
+            'line-width': 6,
             'line-opacity': 1,
           },
         });
@@ -465,8 +471,8 @@ export default function MapCanvas({
           source: 'camera-link-line',
           paint: {
             'line-color': '#06B6D4',
-            'line-width': 3,
-            'line-dasharray': [1, 2],
+            'line-width': 2.5,
+            'line-dasharray': [2, 2],
             'line-opacity': 0.95,
           },
         });
@@ -479,7 +485,13 @@ export default function MapCanvas({
     [buildSpatialLayersData, activeRoutePlan, vehicleType, isDarkMode, selectedHotspot]
   );
 
-  // Khởi tạo bản đồ MapLibre GL JS lần đầu
+  const syncLayersRef = useRef(syncMapSourcesAndLayers);
+  syncLayersRef.current = syncMapSourcesAndLayers;
+
+  const featuresRef = useRef(features);
+  featuresRef.current = features;
+
+  // Khởi tạo bản đồ MapLibre GL JS lần đầu với CARTO Vector GL Style
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
 
@@ -487,7 +499,7 @@ export default function MapCanvas({
 
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
-      style: createBasemapStyle(isDarkMode),
+      style: getVectorBasemapStyleUrl(isDarkMode),
       center: initialMeta.center,
       zoom: initialMeta.zoom,
       minZoom: 10.2,
@@ -495,14 +507,14 @@ export default function MapCanvas({
       attributionControl: false,
     });
 
-    map.addControl(
-      new maplibregl.AttributionControl({ compact: true }),
-      'bottom-left'
-    );
-
     map.on('load', () => {
       setIsMapLoaded(true);
-      syncMapSourcesAndLayers(map);
+      setCurrentZoom(map.getZoom());
+      syncLayersRef.current(map);
+    });
+
+    map.on('zoomend', () => {
+      setCurrentZoom(map.getZoom());
     });
 
     // Bắt sự kiện click vào LineString của điểm ngập trên bản đồ
@@ -518,7 +530,7 @@ export default function MapCanvas({
         const clickedFeature = e.features?.[0];
         const hsId = clickedFeature?.properties?.hotspot_id;
         if (hsId) {
-          const match = features.find((f) => f.properties.hotspot_id === hsId);
+          const match = featuresRef.current.find((f) => f.properties.hotspot_id === hsId);
           if (match) {
             onSelectHotspot(match.properties);
           }
@@ -549,17 +561,15 @@ export default function MapCanvas({
   }, []);
 
   const prevDarkModeRef = useRef<boolean>(isDarkMode);
-  const syncLayersRef = useRef(syncMapSourcesAndLayers);
-  syncLayersRef.current = syncMapSourcesAndLayers;
 
-  // Đổi giao diện Sáng / Tối của Basemap CHỈ khi isDarkMode thực sự thay đổi
+  // Đổi giao diện Sáng / Tối của Vector Basemap CHỈ khi isDarkMode thực sự thay đổi
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !isMapLoaded) return;
     if (prevDarkModeRef.current === isDarkMode) return;
     prevDarkModeRef.current = isDarkMode;
 
-    map.setStyle(createBasemapStyle(isDarkMode));
+    map.setStyle(getVectorBasemapStyleUrl(isDarkMode));
     map.once('styledata', () => {
       syncLayersRef.current(map);
     });
@@ -580,7 +590,7 @@ export default function MapCanvas({
     map.flyTo({
       center: meta.center,
       zoom: meta.zoom,
-      duration: 900,
+      duration: 850,
       essential: true,
     });
   }, [selectedDistrict, isMapLoaded]);
@@ -596,33 +606,36 @@ export default function MapCanvas({
         new maplibregl.LngLatBounds(coords[0], coords[0])
       );
       map.fitBounds(bounds, {
-        padding: { top: 90, bottom: 290, left: 45, right: 85 },
+        padding: { top: 135, bottom: 260, left: 40, right: 65 },
         duration: 850,
       });
     }
   }, [activeRoutePlan, isMapLoaded]);
 
-  // Vẽ bộ Interactive Markers (Điểm đen ngập, Báo cáo cộng đồng, Camera TTGT, Điểm Đi/Đến, Vị trí GPS)
+  // Vẽ bộ Interactive Markers theo đúng quy tắc Scale-Appropriate Generalization (Cartography Designer)
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !isMapLoaded) return;
 
-    // Xóa markers cũ
     markersRef.current.forEach((m) => m.remove());
     markersRef.current = [];
 
-    // 1. Render 18 tọa độ Camera Giao thông TTGT (`traffic_cameras`)
+    const isDetailedZoom = currentZoom >= 13.3;
+
+    // 1. Render Camera Giao thông TTGT (Chỉ hiện khi zoom >= 13.3, hoặc khi điểm ngập đang chọn liên kết tới camera đó, hoặc khi bật nút Hiện Camera)
     cameras.forEach((cam) => {
       const isHighlighted = selectedHotspot?.nearby_camera?.id === cam.id;
+      if (!isDetailedZoom && !isHighlighted && !showAllCameras) return;
+
       const el = document.createElement('button');
       el.type = 'button';
       el.setAttribute('aria-label', cam.camera_name);
-      el.className = `w-11 h-11 flex items-center justify-center focus:outline-none group`;
+      el.className = 'w-9 h-9 flex items-center justify-center focus:outline-none group';
       el.innerHTML = `
-        <span class="w-7 h-7 rounded-full bg-[#312E81] text-white text-xs flex items-center justify-center shadow-lg transition-transform group-hover:scale-110 ${
+        <span class="w-6 h-6 rounded-full bg-indigo-950/90 text-cyan-300 text-[11px] flex items-center justify-center shadow-lg backdrop-blur-md transition-transform group-hover:scale-115 ${
           isHighlighted
-            ? 'ring-4 ring-[#06B6D4] scale-125 animate-pulse'
-            : 'border-2 border-white/90'
+            ? 'ring-2 ring-cyan-400 scale-125 animate-pulse border border-cyan-300'
+            : 'border border-indigo-400/60'
         }">
           📹
         </span>
@@ -644,15 +657,15 @@ export default function MapCanvas({
       const el = document.createElement('button');
       el.type = 'button';
       el.setAttribute('aria-label', `Báo cáo cộng đồng: ${report.street_name}`);
-      el.className = 'min-w-[48px] min-h-[48px] flex items-center justify-center focus:outline-none';
+      el.className = 'min-w-[40px] min-h-[40px] flex items-center justify-center focus:outline-none';
       el.innerHTML = `
-        <div class="px-2 py-1 rounded-full shadow-xl font-bold text-[11px] flex items-center gap-1 transition-transform hover:scale-105 ${
+        <div class="px-2 py-0.5 rounded-full shadow-lg font-bold text-[10px] flex items-center gap-1 backdrop-blur-md transition-transform hover:scale-105 ${
           isVerified
-            ? 'bg-blue-600 text-white border-2 border-white ring-2 ring-blue-400/60'
-            : 'bg-amber-500 text-slate-950 border-2 border-dashed border-white'
+            ? 'bg-blue-600/95 text-white border border-white/80'
+            : 'bg-amber-500/95 text-slate-950 border border-dashed border-slate-900'
         }">
-          <span>${isVerified ? '✓' : '?'}</span>
-          <span>📸 ${report.confirm_count} người</span>
+          <span>📸</span>
+          <span>${report.confirm_count}</span>
         </div>
       `;
       el.addEventListener('click', (ev) => {
@@ -666,46 +679,64 @@ export default function MapCanvas({
       markersRef.current.push(marker);
     });
 
-    // 3. Render Badge 18 tuyến đường Điểm đen ngập (CVD-Safe: Biểu tượng + Độ sâu ~cm + Trạng thái)
+    // 3. Render Tactical Sonar Pins cho 18 tuyến đường Điểm đen ngập (Thiết kế tinh gọn, hiện đại, không đè chữ)
     features.forEach((f) => {
       const p = f.properties;
       const isSelected = selectedHotspot?.hotspot_id === p.hotspot_id;
       const isVerified = p.verification_status === 'VERIFIED' || p.confirm_count >= 3;
 
-      // Ngưỡng cảnh báo theo loại xe: Xe máy >=20cm, Ô tô >=25cm
       const vehicleThreshold = vehicleType === 'car' ? 25 : 20;
       const isDangerForVehicle = p.estimated_depth_cm >= vehicleThreshold;
 
-      let bgClass = 'bg-[#10B981] text-white border-white';
-      let icon = '✓';
+      let pillStyle =
+        'bg-emerald-950/90 text-emerald-200 border-emerald-400/70 shadow-emerald-950/50';
+      let dotColor = '#10B981';
+
       if (p.severity_level === 3) {
-        bgClass = 'bg-[#EF4444] text-white border-white';
-        icon = '⛔';
+        pillStyle = 'bg-red-600/95 text-white border-white/90 shadow-red-600/50';
+        dotColor = '#FFFFFF';
       } else if (p.severity_level === 2) {
-        bgClass = 'bg-[#F97316] text-white border-white';
-        icon = '⚠️';
+        pillStyle = 'bg-orange-500/95 text-white border-white/85 shadow-orange-600/40';
+        dotColor = '#FFF7ED';
       } else if (p.severity_level === 1) {
-        bgClass = 'bg-[#F59E0B] text-slate-950 border-slate-900';
-        icon = '🛞';
+        pillStyle = 'bg-amber-400/95 text-slate-950 border-slate-900/60 shadow-amber-500/30';
+        dotColor = '#0F172A';
       }
+
+      const shortStreet = p.street_name.split('(')[0].replace('Đường ', '').trim();
 
       const el = document.createElement('button');
       el.type = 'button';
       el.setAttribute('aria-label', `Điểm ngập ${p.street_name}`);
       el.className =
-        'min-w-[48px] min-h-[48px] flex items-center justify-center focus:outline-none group';
+        'min-w-[42px] min-h-[42px] flex items-center justify-center focus:outline-none group';
 
       el.innerHTML = `
-        <div class="px-2.5 py-1 rounded-full shadow-xl font-extrabold text-xs flex items-center gap-1 transition-all group-hover:scale-110 ${bgClass} ${
-          isVerified ? 'border-2 border-solid' : 'border-2 border-dashed'
-        } ${isSelected ? 'ring-4 ring-blue-400 scale-115 z-30' : ''} ${
-          isDangerForVehicle ? 'shadow-red-600/40' : 'opacity-90'
-        }">
-          <span>${icon}</span>
-          <span style="font-family: monospace;">~${p.estimated_depth_cm}cm</span>
-          <span class="text-[10px] px-1 rounded bg-black/25 text-white">${
-            isVerified ? `✓${p.confirm_count > 0 ? p.confirm_count : ''}` : '🕒1-3h'
-          }</span>
+        <div class="relative flex items-center">
+          ${
+            p.severity_level === 3 || isSelected
+              ? `<span class="absolute -inset-1 rounded-full ${
+                  p.severity_level === 3 ? 'bg-red-500/35' : 'bg-blue-500/35'
+                } animate-ping pointer-events-none"></span>`
+              : ''
+          }
+          <div class="relative px-2 py-0.5 rounded-full shadow-lg backdrop-blur-md font-extrabold text-[11px] leading-tight flex items-center gap-1 transition-all duration-150 group-hover:scale-110 ${pillStyle} ${
+            isVerified ? 'border-[1.5px] border-solid' : 'border-[1.5px] border-dashed'
+          } ${
+            isSelected
+              ? 'ring-3 ring-blue-400 scale-115 z-30'
+              : isDangerForVehicle
+                ? 'opacity-100'
+                : 'opacity-80'
+          }">
+            <span class="w-1.5 h-1.5 rounded-full shrink-0" style="background:${dotColor}"></span>
+            <span style="font-family: var(--font-mono), monospace;">${p.estimated_depth_cm}cm</span>
+            ${
+              isDetailedZoom || isSelected
+                ? `<span class="max-w-[78px] truncate text-[10px] font-semibold opacity-95 pl-0.5 border-l border-current/25">${shortStreet}</span>`
+                : ''
+            }
+          </div>
         </div>
       `;
 
@@ -725,11 +756,11 @@ export default function MapCanvas({
       markersRef.current.push(marker);
     });
 
-    // 4. Render Điểm Đi (🟢) và Điểm Đến (🔴) khi đang bật tìm lộ trình
+    // 4. Render Điểm Đi (A) và Điểm Đến (B) khi đang bật tìm lộ trình
     if (activeRoutePlan && routeOrigin && routeDestination) {
       const origEl = document.createElement('div');
       origEl.className =
-        'px-2.5 py-1 rounded-full bg-emerald-600 text-white text-xs font-extrabold border-2 border-white shadow-xl';
+        'px-2.5 py-1 rounded-full bg-emerald-600 text-white text-[11px] font-extrabold border-2 border-white shadow-xl';
       origEl.innerText = '🟢 Điểm đi';
       markersRef.current.push(
         new maplibregl.Marker({ element: origEl })
@@ -739,8 +770,8 @@ export default function MapCanvas({
 
       const destEl = document.createElement('div');
       destEl.className =
-        'px-2.5 py-1 rounded-full bg-rose-600 text-white text-xs font-extrabold border-2 border-white shadow-xl';
-      destEl.innerText = '🔴 Điểm đến';
+        'px-2.5 py-1 rounded-full bg-blue-600 text-white text-[11px] font-extrabold border-2 border-white shadow-xl';
+      destEl.innerText = '🏁 Điểm đến';
       markersRef.current.push(
         new maplibregl.Marker({ element: destEl })
           .setLngLat([routeDestination.lng, routeDestination.lat])
@@ -752,7 +783,7 @@ export default function MapCanvas({
     if (userGpsLocation) {
       const gpsEl = document.createElement('div');
       gpsEl.className =
-        'w-5 h-5 rounded-full bg-blue-600 border-3 border-white shadow-lg ring-4 ring-blue-500/40 animate-pulse';
+        'w-4 h-4 rounded-full bg-blue-500 border-2 border-white shadow-lg ring-4 ring-blue-500/40 animate-pulse';
       markersRef.current.push(
         new maplibregl.Marker({ element: gpsEl })
           .setLngLat(userGpsLocation)
@@ -770,13 +801,15 @@ export default function MapCanvas({
     routeDestination,
     userGpsLocation,
     isMapLoaded,
+    currentZoom,
+    showAllCameras,
     onSelectHotspot,
     onSelectCrowdReport,
   ]);
 
   return (
     <div className="relative w-full h-full overflow-hidden">
-      {/* Bản đồ toàn màn hình (>86% Viewport) */}
+      {/* Bản đồ Vector GL toàn màn hình (>86% Viewport) */}
       <div
         ref={mapContainerRef}
         className="w-full h-full"
@@ -788,20 +821,20 @@ export default function MapCanvas({
         <div
           role="dialog"
           aria-label="Thông tin Camera Giao thông TTGT TP.HCM"
-          className="absolute inset-x-2.5 bottom-28 z-30 libre-glass rounded-2xl border border-cyan-500/50 shadow-2xl p-3 space-y-2 animate-in fade-in duration-150"
+          className="absolute inset-x-3 bottom-36 z-30 libre-glass rounded-2xl border border-cyan-500/40 shadow-2xl p-3.5 space-y-2.5 animate-in fade-in duration-150"
         >
           <div className="flex items-start justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <span className="w-8 h-8 rounded-xl bg-[#312E81] text-white flex items-center justify-center ring-2 ring-cyan-400 shrink-0">
-                <Video className="w-4 h-4 text-cyan-300" />
+            <div className="flex items-center gap-2.5">
+              <span className="w-9 h-9 rounded-xl bg-indigo-950 text-cyan-300 flex items-center justify-center ring-1 ring-cyan-400/60 shrink-0">
+                <Video className="w-4 h-4" />
               </span>
               <div>
-                <h3 className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white leading-snug">
+                <h3 className="text-xs font-extrabold text-slate-900 dark:text-white leading-snug">
                   {selectedCameraPopover.camera_name}
                 </h3>
-                <span className="text-[11px] font-semibold text-cyan-700 dark:text-cyan-300 metric-mono">
-                  📍 {selectedCameraPopover.district} • Cách điểm ngập{' '}
-                  {selectedCameraPopover.distance_to_hotspot_m}m (&lt;300m)
+                <span className="text-[11px] font-semibold text-cyan-600 dark:text-cyan-300 metric-mono">
+                  {selectedCameraPopover.district} • Cách điểm ngập{' '}
+                  {selectedCameraPopover.distance_to_hotspot_m}m
                 </span>
               </div>
             </div>
@@ -809,7 +842,7 @@ export default function MapCanvas({
             <button
               type="button"
               onClick={() => setSelectedCameraPopover(null)}
-              className="w-8 h-8 rounded-lg bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-300"
+              className="w-7 h-7 rounded-lg bg-slate-200/80 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300"
             >
               <X className="w-4 h-4" />
             </button>
@@ -819,7 +852,7 @@ export default function MapCanvas({
             {selectedCameraPopover.ttgt_reference_note}
           </p>
 
-          <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1">
+          <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
             <span>Nguồn: Cổng thông tin Giao thông TP.HCM (Sở GTVT)</span>
           </div>
@@ -828,92 +861,87 @@ export default function MapCanvas({
             href="http://giaothong.hochiminhcity.gov.vn/"
             target="_blank"
             rel="noopener noreferrer"
-            className="wet-touch-target w-full px-3 py-2 rounded-xl bg-[#312E81] hover:bg-indigo-800 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow"
+            className="wet-touch-target w-full px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-md transition"
           >
-            <ExternalLink className="w-4 h-4 text-cyan-300" />
-            <span>↗ Mở Cổng TTGT TP.HCM để đối chiếu trực tiếp</span>
+            <ExternalLink className="w-3.5 h-3.5" />
+            <span>Mở Cổng TTGT TP.HCM đối chiếu trực tiếp</span>
           </a>
         </div>
       )}
 
-      {/* Bảng Chú giải Bản đồ (Map Legend chuẩn Mục 6 docs/05-cartography.md) */}
+      {/* Bảng Chú giải Bản đồ & Bật/Tắt lớp Camera (Chuẩn Cartography Designer) */}
       {showLegend && (
         <div
           role="region"
           aria-label="Chú giải ký hiệu bản đồ ngập CVD-Safe"
-          className="absolute inset-x-2.5 bottom-28 z-25 libre-glass rounded-2xl border border-slate-900/15 dark:border-white/20 shadow-2xl p-3 text-xs space-y-2 animate-in fade-in duration-150"
+          className="absolute inset-x-3 bottom-36 z-25 libre-glass rounded-2xl border border-slate-200 dark:border-white/15 shadow-2xl p-3.5 text-xs space-y-2.5 animate-in fade-in duration-150"
         >
-          <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-1.5">
-            <span className="font-extrabold text-slate-900 dark:text-white text-sm">
-              🗺️ Chú giải Bản đồ (Chuẩn CVD-Safe)
+          <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2">
+            <span className="font-extrabold text-slate-900 dark:text-white text-xs">
+              Chú giải Bản đồ Thủy văn (CVD-Safe)
             </span>
             <button
               type="button"
               onClick={onCloseLegend}
-              className="px-2 py-1 rounded-lg bg-slate-200 dark:bg-slate-800 font-bold text-slate-700 dark:text-slate-300"
+              className="px-2 py-0.5 rounded-lg bg-slate-200 dark:bg-slate-800 font-semibold text-slate-700 dark:text-slate-300 text-[11px]"
             >
-              Đóng ✕
+              Đóng
             </button>
           </div>
 
-          {/* 4 Cấp độ ngập */}
-          <div className="space-y-1.5">
-            <div className="font-bold text-slate-700 dark:text-slate-300">
-              1. Cấp độ ngập &amp; Tác động theo bộ phận xe:
+          {/* Nút bật/tắt nhanh hiển thị toàn bộ 18 Camera TTGT ở mọi mức zoom */}
+          <div className="flex items-center justify-between bg-slate-100 dark:bg-slate-800/80 px-2.5 py-1.5 rounded-xl">
+            <span className="text-[11px] font-medium text-slate-700 dark:text-slate-200">
+              📹 Hiển thị toàn bộ 18 Camera TTGT
+            </span>
+            <button
+              type="button"
+              onClick={() => setShowAllCameras((prev) => !prev)}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition ${
+                showAllCameras
+                  ? 'bg-cyan-500 text-slate-950'
+                  : 'bg-slate-300 dark:bg-slate-700 text-slate-800 dark:text-slate-200'
+              }`}
+            >
+              {showAllCameras ? 'Đang bật' : 'Tự động theo Zoom'}
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 gap-1.5 text-[11px]">
+            <div className="flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded-full bg-[#EF4444] shrink-0" />
+              <span className="text-slate-700 dark:text-slate-200 font-medium">
+                <strong>&gt;35cm:</strong> Lút ống pô / đèn pha
+              </span>
             </div>
-            <div className="grid grid-cols-1 gap-1">
-              <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 rounded bg-[#EF4444] text-white font-bold metric-mono w-20 text-center">
-                  ⛔ &gt;35cm
-                </span>
-                <span className="text-slate-700 dark:text-slate-300">
-                  <strong>Cấp 3 (Ngập sâu):</strong> Quá ống pô / chạm đèn pha ô tô
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 rounded bg-[#F97316] text-white font-bold metric-mono w-20 text-center">
-                  ⚠️ 20–35cm
-                </span>
-                <span className="text-slate-700 dark:text-slate-300">
-                  <strong>Cấp 2 (Nguy hiểm):</strong> Ngang ống pô / chạm gầm Sedan
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 rounded bg-[#F59E0B] text-slate-950 font-bold metric-mono w-20 text-center">
-                  🛞 10–20cm
-                </span>
-                <span className="text-slate-700 dark:text-slate-300">
-                  <strong>Cấp 1 (Ngập nhẹ):</strong> Xâm xấp bánh xe — Đi chậm
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 rounded bg-[#10B981] text-white font-bold metric-mono w-20 text-center">
-                  ✓ &lt;10cm
-                </span>
-                <span className="text-slate-700 dark:text-slate-300">
-                  <strong>Cấp 0:</strong> Chưa ghi nhận ngập theo dữ liệu hiện tại
-                </span>
-              </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded-full bg-[#F97316] shrink-0" />
+              <span className="text-slate-700 dark:text-slate-200 font-medium">
+                <strong>20–35cm:</strong> Chạm gầm / pô
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded-full bg-[#F59E0B] shrink-0" />
+              <span className="text-slate-700 dark:text-slate-200 font-medium">
+                <strong>10–20cm:</strong> Ngập bánh xe
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded-full bg-[#10B981] shrink-0" />
+              <span className="text-slate-700 dark:text-slate-200 font-medium">
+                <strong>&lt;10cm:</strong> Mặt đường ổn định
+              </span>
             </div>
           </div>
 
-          {/* Phân biệt Nét liền vs Nét đứt & Lộ trình */}
-          <div className="space-y-1 border-t border-slate-200 dark:border-slate-800 pt-2">
-            <div className="font-bold text-slate-700 dark:text-slate-300">
-              2. Hình thái nét vẽ &amp; Lộ trình tránh ngập:
-            </div>
-            <p className="text-slate-700 dark:text-slate-300">
-              • <strong>━━━ Nét liền đặc (✓):</strong> Đã xác minh thực tế (≥3 người báo / đa nguồn).
+          <div className="space-y-1 border-t border-slate-200 dark:border-slate-800 pt-2 text-[11px] text-slate-600 dark:text-slate-300">
+            <p>
+              • <strong>━━━ Nét liền:</strong> Đã xác minh thực tế (≥3 người báo) •{' '}
+              <strong>┈┈┈ Nét đứt:</strong> Dự báo sớm 1–3h.
             </p>
-            <p className="text-slate-700 dark:text-slate-300">
-              • <strong>┈┈┈ Nét đứt (🕒 1–3h):</strong> Dự báo nguy cơ ngập sớm từ Mưa + Triều Phú An.
-            </p>
-            <p className="text-slate-700 dark:text-slate-300">
-              • <strong className="text-[#0284C7]">━━━ Tuyến #0284C7 (Xe máy)</strong> /{' '}
-              <strong className="text-[#2563EB]">#2563EB (Ô tô):</strong> Lộ trình thay thế ít rủi ro ngập.
-            </p>
-            <p className="text-slate-700 dark:text-slate-300">
-              • <strong className="text-[#EF4444]">╍╍╍ Nét đứt Đỏ-Xám:</strong> Đoạn đường ngắn nhất cắt qua vùng ngập cần tránh.
+            <p>
+              • <strong className="text-sky-400">━━━ Xanh dương:</strong> Lộ trình né ngập an toàn •{' '}
+              <strong className="text-red-400">╍╍╍ Đỏ đứt:</strong> Đoạn ngập cần tránh.
             </p>
           </div>
         </div>

@@ -93,11 +93,11 @@
 }
 
 @layer components {
-  /* Glassmorphic Floating Pill / Sheet Surface */
+  /* Glassmorphic Floating Pill / Sheet Surface (LibreUIUX Premium Glass) */
   .libre-glass {
     background-color: var(--surface-glass);
-    backdrop-filter: var(--glass-blur);
-    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: blur(18px) saturate(165%);
+    -webkit-backdrop-filter: blur(18px) saturate(165%);
   }
 
   /* Wet-Finger Minimum Touch Target (48x48px) */
@@ -115,6 +115,15 @@
   .metric-mono {
     font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
+  }
+
+  /* Hide horizontal scrollbar on district pill tabs */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 }
 

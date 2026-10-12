@@ -317,19 +317,19 @@ export default function CrowdReportModal({
       aria-modal="true"
       aria-label="Hộp thoại Báo ngập hiện trường kiểm soát 5 lớp"
     >
-      <div className="w-full max-w-xl libre-glass rounded-t-sheet border border-slate-900/15 dark:border-white/20 shadow-2xl max-h-[92%] flex flex-col overflow-hidden">
+      <div className="w-full libre-glass rounded-t-sheet border-t border-slate-900/15 dark:border-white/20 shadow-[0_-16px_48px_rgba(0,0,0,0.6)] max-h-[92%] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-gradient-to-r from-orange-600/15 to-red-600/15 shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-orange-600 to-red-600 text-white flex items-center justify-center shadow-md font-bold text-lg">
-              📸
+        <div className="px-3.5 py-2.5 border-b border-slate-200 dark:border-slate-800/90 flex items-center justify-between bg-gradient-to-r from-orange-600/15 to-red-600/15 shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-orange-600 to-red-600 text-white flex items-center justify-center shadow-md shrink-0">
+              <Camera className="w-4 h-4" />
             </div>
-            <div>
-              <h2 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white leading-tight">
+            <div className="min-w-0">
+              <h2 className="text-sm font-extrabold text-slate-900 dark:text-white leading-tight truncate">
                 Báo Ngập Hiện Trường (Kiểm Soát 5 Lớp)
               </h2>
-              <p className="text-xs text-slate-600 dark:text-slate-300">
-                Thiết kế Zero-Text-Input (Không cần gõ chữ dưới mưa • Nén ảnh &lt;150KB)
+              <p className="text-[11px] text-slate-600 dark:text-slate-300 truncate">
+                Zero-Text-Input • Chạm chọn nhanh dưới mưa • Nén &lt;150KB
               </p>
             </div>
           </div>
@@ -338,62 +338,62 @@ export default function CrowdReportModal({
             type="button"
             onClick={onClose}
             aria-label="Đóng hộp thoại báo ngập"
-            className="wet-touch-target rounded-xl bg-slate-200/80 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 flex items-center justify-center text-slate-700 dark:text-slate-200 transition"
+            className="wet-touch-target -mr-1 rounded-xl bg-slate-200/80 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 flex items-center justify-center text-slate-700 dark:text-slate-200 transition shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Nội dung 3 Bước */}
-        <div className="p-4 overflow-y-auto space-y-4">
+        <div className="p-3.5 overflow-y-auto space-y-3.5">
           {/* BƯỚC 1: CHỤP ẢNH TRỰC TIẾP (<150KB) + GIẢ LẬP KIỂM THỬ GEOFENCE 500M */}
-          <div className="space-y-2.5">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400">
-                Bước 1: Ảnh hiện trường (&lt;150KB) &amp; Kiểm tra vị trí GPS (≤500m)
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[11px] font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400">
+                Bước 1: Ảnh hiện trường &amp; Geofence ≤500m
               </span>
-              <span className="metric-mono text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
-                Dung lượng: {photoSizeKb} KB (&lt;150KB)
+              <span className="metric-mono text-[10.5px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 shrink-0">
+                {photoSizeKb} KB (&lt;150KB)
               </span>
             </div>
 
-            {/* Bộ nút Giả lập nhanh cho Chủ dự án test cơ chế chặn Geofence 500m */}
-            <div className="p-2.5 rounded-2xl bg-violet-500/10 dark:bg-violet-500/15 border border-violet-500/40 space-y-1.5">
-              <div className="text-xs font-bold text-violet-900 dark:text-violet-200 flex items-center gap-1.5">
-                <Sparkles className="w-4 h-4 text-violet-600 dark:text-violet-400 shrink-0" />
-                <span>Chế độ Kiểm thử Bảo mật GPS Geofence (Dành cho Chủ dự án):</span>
+            {/* Bộ nút Giả lập nhanh cho Chủ dự án test cơ chế chặn Geofence 500m (Không lặp icon) */}
+            <div className="p-2.5 rounded-2xl bg-violet-500/10 dark:bg-violet-500/15 border border-violet-500/35 space-y-1.5">
+              <div className="text-[11px] font-bold text-violet-900 dark:text-violet-200 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-violet-600 dark:text-violet-400 shrink-0" />
+                <span>Chế độ Kiểm thử Bảo mật GPS Geofence:</span>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-1.5">
                 <button
                   type="button"
                   onClick={() => setGpsTestMode('ON_SITE_VALID')}
-                  className={`wet-touch-target px-3 py-2 rounded-xl text-xs font-bold border text-left flex items-center gap-2 transition ${
+                  className={`min-h-[42px] px-2.5 py-1.5 rounded-xl text-[11px] font-bold border text-left flex items-center gap-1.5 transition ${
                     gpsTestMode === 'ON_SITE_VALID'
-                      ? 'bg-emerald-600 text-white border-emerald-400 shadow-md'
-                      : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700'
+                      ? 'bg-emerald-600 text-white border-emerald-400 shadow-sm'
+                      : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-white/10'
                   }`}
                 >
-                  <CheckCircle2 className="w-4 h-4 shrink-0" />
-                  <span>✅ Đứng tại hiện trường (&lt;500m)</span>
+                  <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                  <span className="leading-tight">Tại hiện trường (≤500m)</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setGpsTestMode('SPAMMER_FAR_3KM')}
-                  className={`wet-touch-target px-3 py-2 rounded-xl text-xs font-bold border text-left flex items-center gap-2 transition ${
+                  className={`min-h-[42px] px-2.5 py-1.5 rounded-xl text-[11px] font-bold border text-left flex items-center gap-1.5 transition ${
                     gpsTestMode === 'SPAMMER_FAR_3KM'
-                      ? 'bg-red-600 text-white border-red-400 shadow-md'
-                      : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700'
+                      ? 'bg-red-600 text-white border-red-400 shadow-sm'
+                      : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-white/10'
                   }`}
                 >
-                  <ShieldAlert className="w-4 h-4 shrink-0" />
-                  <span>⛔ Giả lập kẻ xấu ở xa (&gt;3km - Test chặn Geofence)</span>
+                  <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
+                  <span className="leading-tight">Kẻ xấu ở xa (&gt;3km - Chặn)</span>
                 </button>
               </div>
             </div>
 
             {/* Khung hiển thị ảnh chụp hiện trường 16:9 kèm 2 Huy hiệu Lớp 1 & Lớp 2 */}
-            <div className="relative rounded-2xl overflow-hidden border border-slate-300 dark:border-slate-700 bg-slate-900 h-44">
+            <div className="relative rounded-2xl overflow-hidden border border-slate-300 dark:border-slate-700 bg-slate-900 h-40">
               {photoDataUrl && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -403,10 +403,10 @@ export default function CrowdReportModal({
                 />
               )}
 
-              {/* Huy hiệu Lớp 1 (GPS <= 500m) & Lớp 2 (EXIF <= 10 phút) đè trên ảnh */}
-              <div className="absolute top-2.5 inset-x-2.5 flex flex-col gap-1.5">
+              {/* Huy hiệu Lớp 1 (GPS <= 500m) & Lớp 2 (EXIF <= 10 phút) đè trên ảnh (1 icon/dòng) */}
+              <div className="absolute top-2 inset-x-2 flex flex-col gap-1">
                 <div
-                  className={`px-2.5 py-1 rounded-xl text-xs font-bold backdrop-blur-md flex items-center gap-1.5 shadow ${
+                  className={`px-2.5 py-1 rounded-xl text-[11px] font-bold backdrop-blur-md flex items-center gap-1.5 shadow ${
                     isGeofenceValid
                       ? 'bg-emerald-950/85 text-emerald-300 border border-emerald-400/50'
                       : 'bg-red-950/90 text-red-200 border border-red-400/60'
@@ -415,31 +415,30 @@ export default function CrowdReportModal({
                   {isGeofenceValid ? (
                     <>
                       <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                      <span>
-                        ✓ Lớp 1–2 (GPS Geofence): Cách tâm ngập {calculatedDistanceM}m (Hợp lệ ≤500m)
+                      <span className="truncate">
+                        Lớp 1–2 (Geofence): Cách tâm ngập {calculatedDistanceM}m (≤500m)
                       </span>
                     </>
                   ) : (
                     <>
                       <XCircle className="w-3.5 h-3.5 text-red-400 shrink-0" />
-                      <span>
-                        ⛔ VI PHẠM GEOFENCE: Cách điểm ngập {(calculatedDistanceM / 1000).toFixed(2)}
-                        km (&gt;500m) — Sẽ bị chặn!
+                      <span className="truncate">
+                        Vi phạm Geofence: Cách {(calculatedDistanceM / 1000).toFixed(2)}km (&gt;500m)
                       </span>
                     </>
                   )}
                 </div>
 
-                <div className="px-2.5 py-1 rounded-xl text-xs font-bold bg-slate-900/85 text-sky-300 border border-sky-400/40 backdrop-blur-md flex items-center gap-1.5 w-fit">
+                <div className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-slate-900/85 text-sky-300 border border-sky-400/40 backdrop-blur-md flex items-center gap-1.5 w-fit">
                   <Camera className="w-3.5 h-3.5 shrink-0" />
                   <span>
-                    ✓ Lớp 3 (EXIF &amp; Nén Canvas): Vừa chụp (≤10 phút) • {photoSizeKb}KB WebP
+                    Lớp 3 (EXIF &amp; WebP): Vừa chụp (≤10p) • {photoSizeKb}KB
                   </span>
                 </div>
               </div>
 
               {/* Nút mở Camera thật / tải ảnh khác */}
-              <div className="absolute bottom-2.5 right-2.5 flex items-center gap-2">
+              <div className="absolute bottom-2 right-2 flex items-center gap-2">
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -451,22 +450,22 @@ export default function CrowdReportModal({
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="px-3 py-1.5 rounded-xl bg-white/90 hover:bg-white text-slate-900 font-bold text-xs shadow-lg flex items-center gap-1.5"
+                  className="px-2.5 py-1.5 rounded-xl bg-white/95 hover:bg-white text-slate-900 font-bold text-[11px] shadow-lg flex items-center gap-1.5"
                 >
                   <Upload className="w-3.5 h-3.5" />
-                  <span>Chụp / Chọn ảnh từ máy</span>
+                  <span>Chụp / Tải ảnh</span>
                 </button>
               </div>
             </div>
           </div>
 
-          {/* BƯỚC 2: 4 NÚT CHỌN NHANH MỨC NGẬP CỰC LỚN (CAO >= 64PX / 68PX) */}
-          <div className="space-y-2">
-            <span className="text-xs font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400 block">
-              Bước 2: Chọn mức ngập quan sát được theo bộ phận xe (Vùng chạm tay ướt ≥68px)
+          {/* BƯỚC 2: 4 NÚT CHỌN NHANH MỨC NGẬP CỰC LỚN (2X2 CÂN ĐỐI TRONG KHUNG 430PX) */}
+          <div className="space-y-1.5">
+            <span className="text-[11px] font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400 block">
+              Bước 2: Chọn mức ngập theo bộ phận xe (Vùng chạm ≥68px)
             </span>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2">
               {DEPTH_BUTTONS.map((btn) => {
                 const isSelected = selectedDepth === btn.value;
                 return (
@@ -475,14 +474,14 @@ export default function CrowdReportModal({
                     type="button"
                     onClick={() => setSelectedDepth(btn.value)}
                     aria-pressed={isSelected}
-                    className={`min-h-[68px] px-4 py-3 rounded-2xl border-2 text-left transition-all flex flex-col justify-center ${
+                    className={`min-h-[68px] p-2.5 rounded-2xl border-2 text-left transition-all flex flex-col justify-center ${
                       isSelected ? btn.activeClass : btn.defaultClass
                     }`}
                   >
-                    <div className="text-sm sm:text-base font-extrabold leading-snug">
+                    <div className="text-xs font-extrabold leading-snug">
                       {btn.title}
                     </div>
-                    <div className="text-xs opacity-85 font-medium mt-0.5">
+                    <div className="text-[10.5px] opacity-85 font-medium mt-0.5 leading-tight">
                       {btn.subtitle}
                     </div>
                   </button>
@@ -493,15 +492,15 @@ export default function CrowdReportModal({
 
           {/* BƯỚC 3: ĐỊA CHỈ TỰ ĐỘNG TỪ GPS, DỊCH CHUYỂN GHIM <=500M & GỬI 1 CHẠM */}
           <div className="space-y-2.5">
-            <span className="text-xs font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400 block">
-              Bước 3: Vị trí tự động từ GPS &amp; Xác nhận gửi 1 chạm
+            <span className="text-[11px] font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400 block">
+              Bước 3: Vị trí tự động &amp; Gửi 1 chạm
             </span>
 
-            <div className="p-3 rounded-2xl bg-slate-100 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 space-y-2">
-              <div className="flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-red-500 shrink-0" />
-                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Tự động định vị tuyến đường ngập gần nhất:
+            <div className="p-3 rounded-2xl bg-slate-100 dark:bg-slate-900/90 border border-slate-200 dark:border-white/10 space-y-2">
+              <div className="flex items-center gap-1.5">
+                <MapPin className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                <span className="text-[11.5px] font-bold text-slate-700 dark:text-slate-300">
+                  Tuyến đường ngập đang đứng gần nhất:
                 </span>
               </div>
 
@@ -509,22 +508,22 @@ export default function CrowdReportModal({
                 aria-label="Chọn tuyến đường điểm ngập tại hiện trường"
                 value={selectedHotspotId}
                 onChange={(e) => setSelectedHotspotId(e.target.value)}
-                className="wet-touch-target w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs sm:text-sm font-bold text-slate-900 dark:text-white"
+                className="wet-touch-target w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-white/10 text-xs font-bold text-slate-900 dark:text-white"
               >
                 {FLOOD_HOTSPOTS_SEED.map((hs) => (
                   <option key={hs.id} value={hs.id}>
-                    📍 {hs.district} — {hs.street_name}
+                    {hs.district} — {hs.street_name}
                   </option>
                 ))}
               </select>
 
               {/* Thanh trượt kéo nhẹ ghim tâm ngập dưới lòng đường khi đứng trên vỉa hè (Walkthrough F3.2) */}
               {gpsTestMode === 'ON_SITE_VALID' && (
-                <div className="pt-1 flex items-center justify-between gap-3 text-xs">
+                <div className="pt-1 flex items-center justify-between gap-2 text-[11.5px]">
                   <span className="text-slate-600 dark:text-slate-400 font-medium">
-                    🎯 Tinh chỉnh ghim từ vỉa hè ra lòng đường ngập:
+                    Tinh chỉnh ghim từ vỉa hè ra lòng đường:
                   </span>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 shrink-0">
                     <input
                       type="range"
                       min={10}
@@ -532,9 +531,9 @@ export default function CrowdReportModal({
                       step={5}
                       value={pinOffsetMeters}
                       onChange={(e) => setPinOffsetMeters(Number(e.target.value))}
-                      className="w-24 accent-blue-600"
+                      className="w-20 accent-blue-600"
                     />
-                    <span className="metric-mono font-bold text-blue-600 dark:text-blue-400 w-12 text-right">
+                    <span className="metric-mono font-bold text-blue-600 dark:text-blue-400 w-10 text-right">
                       {pinOffsetMeters}m
                     </span>
                   </div>
@@ -542,37 +541,37 @@ export default function CrowdReportModal({
               )}
 
               {/* Chú thích Lớp 3-5 bằng ngôn ngữ đời thường dễ hiểu (Walkthrough F3.3) */}
-              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed pt-1 border-t border-slate-200 dark:border-slate-700">
-                🛡️ <strong>Cơ chế cộng đồng:</strong> Báo cáo sẽ hiện ngay trên bản đồ, được gắn nhãn{' '}
-                <strong>&ldquo;Đã xác minh ✓&rdquo;</strong> khi có đủ 3 người quanh đây cùng xác nhận
-                và tự động ẩn sau 90 phút nếu nước rút.
+              <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed pt-1.5 border-t border-slate-200 dark:border-white/10">
+                <strong>Cơ chế cộng đồng (Lớp 4–5):</strong> Báo cáo hiện ngay trên bản đồ, gắn nhãn{' '}
+                <strong>&ldquo;Đã xác minh ✓&rdquo;</strong> khi đủ 3 người quanh 150m cùng xác nhận
+                và tự hạ cấp sau 90 phút nếu nước rút.
               </p>
             </div>
 
             {/* Hiển thị kết quả kiểm duyệt 5 lớp sau khi bấm gửi */}
             {submissionOutcome && (
               <div
-                className={`p-3.5 rounded-2xl border-2 space-y-2 ${
+                className={`p-3 rounded-2xl border-2 space-y-2 ${
                   submissionOutcome.accepted
                     ? 'bg-emerald-500/15 border-emerald-500 text-emerald-950 dark:text-emerald-100'
                     : 'bg-red-500/15 border-red-500 text-red-950 dark:text-red-100'
                 }`}
               >
-                <div className="font-extrabold text-sm flex items-center gap-2">
+                <div className="font-extrabold text-xs flex items-center gap-2">
                   {submissionOutcome.accepted ? (
-                    <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                   ) : (
-                    <ShieldAlert className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0" />
+                    <ShieldAlert className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0" />
                   )}
                   <span>{submissionOutcome.message}</span>
                 </div>
 
                 {submissionOutcome.layers.length > 0 && (
-                  <div className="space-y-1 text-xs bg-white/80 dark:bg-slate-900/80 p-2.5 rounded-xl">
+                  <div className="space-y-1 text-[11px] bg-white/80 dark:bg-slate-900/80 p-2 rounded-xl">
                     {submissionOutcome.layers.map((layer: VerificationLayerCheck) => (
                       <div key={layer.layer} className="flex items-start gap-1.5">
-                        <span className="font-bold">
-                          {layer.passed ? '✅' : '⛔'} Lớp {layer.layer} ({layer.name}):
+                        <span className="font-bold shrink-0">
+                          {layer.passed ? '✓' : '✕'} Lớp {layer.layer} ({layer.name}):
                         </span>
                         <span className="text-slate-700 dark:text-slate-300">{layer.detail}</span>
                       </div>
@@ -582,24 +581,24 @@ export default function CrowdReportModal({
               </div>
             )}
 
-            {/* Nút Gửi 1 chạm (cao >= 56px chuẩn tay ướt) */}
+            {/* Nút Gửi 1 chạm (cao >= 56px chuẩn tay ướt, không lặp icon) */}
             <button
               type="button"
               disabled={isSubmitting}
               onClick={handleSubmitReport}
-              className={`wet-cta-target w-full px-5 py-3.5 rounded-2xl font-extrabold text-base text-white shadow-xl flex items-center justify-center gap-2 transition active:scale-[0.99] ${
+              className={`wet-cta-target w-full px-4 py-3 rounded-2xl font-extrabold text-sm text-white shadow-xl flex items-center justify-center gap-2 transition active:scale-[0.99] ${
                 isGeofenceValid
                   ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500'
                   : 'bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500'
               }`}
             >
-              <Send className="w-5 h-5" />
+              <Send className="w-4 h-4 shrink-0" />
               <span>
                 {isSubmitting
                   ? 'Đang kiểm duyệt 5 lớp...'
                   : isGeofenceValid
-                    ? '🚀 GỬI BÁO CÁO NGẬP NGAY (1 CHẠM)'
-                    : '🧪 THỬ GỬI BÁO CÁO GIẢ TỪ XA (>3KM) ĐỂ XEM HỆ THỐNG CHẶN'}
+                    ? 'GỬI BÁO CÁO NGẬP NGAY (1 CHẠM)'
+                    : 'THỬ GỬI BÁO CÁO TỪ XA (>3KM) — XEM CHẶN GEOFENCE'}
               </span>
             </button>
           </div>

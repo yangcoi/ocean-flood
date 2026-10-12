@@ -10,6 +10,8 @@ import {
   MapPin,
   X,
   AlertCircle,
+  Bike,
+  CarFront,
 } from 'lucide-react';
 import TopStatusBar from '@/components/TopStatusBar';
 import VehicleToggle from '@/components/VehicleToggle';
@@ -91,6 +93,9 @@ export default function OceanFloodHomePage() {
     useState<SavedCommutePreset | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  // Chế độ khung hiển thị: Mặc định chuẩn Mobile-First (430px) ngay cả khi mở trên máy tính
+  const [isMobileViewportFrame, setIsMobileViewportFrame] = useState<boolean>(true);
+
   // Đồng bộ class .dark lên thẻ <html>
   useEffect(() => {
     const root = document.documentElement;
@@ -162,7 +167,6 @@ export default function OceanFloodHomePage() {
         setHighRiskCount(data.metadata.summary_counts?.high_risk_hotspots ?? 0);
       }
 
-      // Cập nhật lại selectedHotspot nếu đang mở thẻ chi tiết
       setSelectedHotspot((prev) => {
         if (!prev) return null;
         const updated = (data.features || []).find(
@@ -188,7 +192,6 @@ export default function OceanFloodHomePage() {
     }, 4000);
   };
 
-  // Xử lý bấm nút Định vị GPS (Kiểm tra đồng ý Nghị định 13/2023/NĐ-CP trước)
   const handleLocateUserClick = () => {
     if (!hasGpsConsent) {
       setShowGpsConsentModal(true);
@@ -206,10 +209,9 @@ export default function OceanFloodHomePage() {
           showToast('📍 Đã định vị GPS hiện tại của bạn.');
         },
         () => {
-          // Nếu trình duyệt trên máy tính không bật GPS hoặc từ chối, đặt vị trí mẫu tại Ngã tư Hàng Xanh (Bình Thạnh)
           setUserGpsLocation([106.7114, 10.8035]);
           showToast(
-            '📍 Đang dùng vị trí tham chiếu tại Ngã tư Hàng Xanh, Bình Thạnh (Do thiết bị chưa bật GPS).'
+            '📍 Đang dùng vị trí tham chiếu tại Ngã tư Hàng Xanh, Bình Thạnh.'
           );
         },
         { enableHighAccuracy: true, timeout: 4000 }
@@ -230,7 +232,6 @@ export default function OceanFloodHomePage() {
     triggerBrowserGeolocation();
   };
 
-  // Mở nhanh lộ trình né một điểm ngập cụ thể từ AlertBottomSheet
   const handleOpenRouteToAvoidHotspot = (hotspot: HotspotForecastProperties) => {
     setSelectedHotspot(null);
     setSelectedCrowdReport(null);
@@ -244,7 +245,6 @@ export default function OceanFloodHomePage() {
     setIsRouteDrawerOpen(true);
   };
 
-  // Bấm 1 chạm mở ngay "Lộ trình đi làm hằng ngày" từ màn hình chính
   const handleQuickSavedCommuteClick = async () => {
     let targetPreset = savedDailyCommute;
     if (!targetPreset) {
@@ -263,35 +263,32 @@ export default function OceanFloodHomePage() {
     setIsRouteDrawerOpen(true);
   };
 
-  // Chế độ khung hiển thị: Mặc định chuẩn Mobile-First (430px) ngay cả khi mở trên máy tính, có nút chuyển sang Toàn màn hình
-  const [isMobileViewportFrame, setIsMobileViewportFrame] = useState<boolean>(true);
-
   return (
-    <div className="relative w-screen h-dvh bg-slate-950 flex flex-col items-center justify-center overflow-hidden select-none">
-      {/* Thanh chuyển đổi chế độ xem trên Desktop (Mobile-First 430px vs Toàn màn hình) */}
-      <div className="hidden sm:flex items-center justify-between w-full max-w-[430px] mb-1.5 px-2 text-xs text-slate-300">
-        <div className="flex items-center gap-1.5 font-bold">
-          <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span>📱 Giao diện Mobile-First PWA (Chuẩn 1 tay khi mưa ngập)</span>
+    <div className="relative w-screen h-dvh bg-[#060911] flex flex-col items-center justify-center overflow-hidden select-none">
+      {/* Thanh công cụ phía trên khung điện thoại (Chỉ hiện trên màn hình máy tính) */}
+      <div className="hidden sm:flex items-center justify-between w-full max-w-[430px] mb-2 px-1 text-xs text-slate-400">
+        <div className="flex items-center gap-2 font-semibold">
+          <span className="inline-block w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_#3B82F6]" />
+          <span className="text-slate-200">Ocean Flood • Mobile-First PWA</span>
         </div>
         <button
           type="button"
           onClick={() => setIsMobileViewportFrame((prev) => !prev)}
-          className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-blue-300 font-bold border border-slate-700 transition text-[11px]"
+          className="px-2.5 py-1 rounded-full bg-slate-900 hover:bg-slate-800 text-slate-300 font-medium border border-white/10 transition text-[11px]"
         >
-          {isMobileViewportFrame ? '🖥️ Mở rộng toàn màn hình' : '📱 Thu về khung Mobile (430px)'}
+          {isMobileViewportFrame ? 'Mở rộng toàn màn hình ↗' : 'Thu về khung Mobile (430px)'}
         </button>
       </div>
 
       {/* KHUNG ĐIỆN THOẠI MOBILE-FIRST (430px) HOẶC TOÀN MÀN HÌNH */}
       <main
-        className={`relative overflow-hidden bg-slate-900 transition-all duration-200 ${
+        className={`relative overflow-hidden bg-slate-950 transition-all duration-200 ${
           isMobileViewportFrame
-            ? 'w-full max-w-[430px] h-dvh sm:h-[92dvh] sm:rounded-[38px] sm:border-[6px] sm:border-slate-800 sm:shadow-[0_25px_70px_rgba(0,0,0,0.75)]'
+            ? 'w-full max-w-[430px] h-dvh sm:h-[91dvh] sm:rounded-[40px] sm:border-[6px] sm:border-slate-800/90 sm:shadow-[0_25px_80px_rgba(0,0,0,0.85)]'
             : 'w-screen h-dvh'
         }`}
       >
-        {/* 1. THANH TRẠNG THÁI MƯA, ĐỈNH TRIỀU PHÚ AN & BỘ CHỌN KỊCH BẢN (O1) */}
+        {/* 1. THANH HUD TRẠNG THÁI MƯA, ĐỈNH TRIỀU PHÚ AN & PILL CHỌN QUẬN (O1) */}
         <TopStatusBar
           scenario={scenario}
           onScenarioChange={(sc) => setScenario(sc)}
@@ -313,11 +310,11 @@ export default function OceanFloodHomePage() {
         {isOffline && (
           <div
             role="alert"
-            className="absolute top-28 inset-x-2.5 z-25 mx-auto max-w-xl px-3 py-2 rounded-2xl bg-amber-500 text-slate-950 font-bold text-[11px] shadow-xl flex items-center gap-2"
+            className="absolute top-36 inset-x-3 z-25 mx-auto max-w-xl px-3 py-2 rounded-2xl bg-amber-500 text-slate-950 font-bold text-[11px] shadow-xl flex items-center gap-2"
           >
             <WifiOff className="w-4 h-4 shrink-0" />
             <span>
-              ⚠️ Mất kết nối mạng. Đang hiển thị dữ liệu lưu tạm gần nhất — vui lòng thận trọng quan sát thực tế.
+              Đang mất kết nối mạng — Hiển thị dữ liệu lưu tạm gần nhất, vui lòng quan sát thực tế.
             </span>
           </div>
         )}
@@ -326,7 +323,7 @@ export default function OceanFloodHomePage() {
         {toastMessage && (
           <div
             role="status"
-            className="absolute top-28 inset-x-2.5 z-35 mx-auto max-w-md px-3.5 py-2 rounded-2xl bg-emerald-600 text-white font-extrabold text-xs shadow-2xl border border-emerald-300 flex items-center justify-between gap-2 animate-in fade-in duration-150"
+            className="absolute top-36 inset-x-3 z-35 mx-auto max-w-md px-3.5 py-2 rounded-2xl bg-emerald-600 text-white font-bold text-xs shadow-2xl border border-emerald-400/50 flex items-center justify-between gap-2 animate-in fade-in duration-150"
           >
             <span>{toastMessage}</span>
             <button
@@ -339,7 +336,7 @@ export default function OceanFloodHomePage() {
           </div>
         )}
 
-        {/* 2. BẢN ĐỒ TƯƠNG TÁC MAPLIBRE GL JS TOÀN MÀN HÌNH (>86% VIEWPORT - L0) */}
+        {/* 2. BẢN ĐỒ VECTOR GL MAPLIBRE TOÀN MÀN HÌNH (>86% VIEWPORT - L0) */}
         <MapCanvas
           features={features}
           crowdReports={crowdReports}
@@ -366,7 +363,7 @@ export default function OceanFloodHomePage() {
           onCloseLegend={() => setShowLegend(false)}
         />
 
-        {/* 3. CÔNG TẮC NỔI CHUYỂN ĐỔI XE MÁY (>=20CM) VS Ô TÔ (>=25CM + PHÓNG CHỮ +12%) (O2) */}
+        {/* 3. CỤM NÚT ĐỊNH VỊ GPS & CHÚ GIẢI BẢN ĐỒ BÊN PHẢI (O2) */}
         <VehicleToggle
           vehicleType={vehicleType}
           onChangeVehicle={(type) => setVehicleType(type)}
@@ -375,23 +372,62 @@ export default function OceanFloodHomePage() {
           onToggleLegend={() => setShowLegend((prev) => !prev)}
         />
 
-        {/* 4. CỤM ĐIỀU KHIỂN DƯỚI ĐÁY (VÙNG NGÓN CÁI THUMB ZONE CHUẨN MOBILE-FIRST) */}
-        <div className="absolute inset-x-0 bottom-0 z-20 pointer-events-none flex flex-col gap-1.5 px-2.5 pb-2">
-          <div className="mx-auto w-full flex items-end justify-between gap-1.5">
-            {/* Cụm bên trái: Thanh kích hoạt Tìm lộ trình tránh ngập & Nút 1 chạm Đi làm */}
-            <div className="pointer-events-auto flex flex-col gap-1 flex-1 min-w-0">
-              <div className="flex items-center gap-1">
+        {/* 4. BOTTOM COMMAND DOCK ĐỒNG NHẤT CHUẨN LIBREUIUX (VÙNG NGÓN CÁI THUMB ZONE) */}
+        <div className="absolute inset-x-2.5 bottom-2.5 z-20 pointer-events-none">
+          <div className="pointer-events-auto libre-glass rounded-[26px] border border-slate-200/80 dark:border-white/15 shadow-[0_16px_48px_rgba(0,0,0,0.55)] p-2.5 flex flex-col gap-2">
+            {/* Hàng trên của Dock: Segmented Vehicle Switcher (Xe máy vs Ô tô) + Nút 1 chạm Đi làm */}
+            <div className="flex items-center justify-between gap-1.5">
+              {/* Segmented Pill: Xe máy (>=20cm) vs Ô tô (>=25cm) */}
+              <div
+                className="flex items-center bg-slate-200/80 dark:bg-slate-900/90 p-0.5 rounded-xl border border-slate-300/60 dark:border-white/10"
+                role="group"
+                aria-label="Chọn chế độ phương tiện để lọc ngưỡng ngập"
+              >
                 <button
                   type="button"
-                  onClick={handleQuickSavedCommuteClick}
-                  title="Mở nhanh Lộ trình đi làm hằng ngày bằng 1 chạm (Lưu trên máy)"
-                  className="px-2.5 py-1.5 rounded-xl bg-amber-500/95 hover:bg-amber-400 text-slate-950 font-extrabold text-[11px] shadow-lg border border-amber-300 flex items-center gap-1 shrink-0 transition active:scale-95"
+                  onClick={() => setVehicleType('motorcycle')}
+                  aria-pressed={vehicleType === 'motorcycle'}
+                  className={`px-2.5 py-1 rounded-[10px] text-[11px] font-bold flex items-center gap-1 transition-all ${
+                    vehicleType === 'motorcycle'
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
                 >
-                  <Bookmark className="w-3.5 h-3.5 shrink-0 fill-slate-950" />
-                  <span>🏠➔🏢 Đi làm (1 chạm)</span>
+                  <Bike className="w-3.5 h-3.5 shrink-0" />
+                  <span>Xe máy</span>
+                  <span className="text-[9.5px] opacity-85 metric-mono">≥20cm</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setVehicleType('car')}
+                  aria-pressed={vehicleType === 'car'}
+                  className={`px-2.5 py-1 rounded-[10px] text-[11px] font-bold flex items-center gap-1 transition-all ${
+                    vehicleType === 'car'
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  <CarFront className="w-3.5 h-3.5 shrink-0" />
+                  <span>Ô tô</span>
+                  <span className="text-[9.5px] opacity-85 metric-mono">≥25cm</span>
                 </button>
               </div>
 
+              {/* Nút 1 chạm: Lộ trình đi làm hằng ngày */}
+              <button
+                type="button"
+                onClick={handleQuickSavedCommuteClick}
+                title="Mở nhanh Lộ trình đi làm hằng ngày bằng 1 chạm"
+                className="px-2.5 py-1.5 rounded-xl bg-violet-500/15 hover:bg-violet-500/25 text-violet-700 dark:text-violet-200 font-bold text-[11px] border border-violet-500/35 flex items-center gap-1 shrink-0 transition active:scale-95"
+              >
+                <Bookmark className="w-3 h-3 shrink-0 text-violet-500 dark:text-violet-300" />
+                <span>Đi làm (1 chạm)</span>
+              </button>
+            </div>
+
+            {/* Hàng chính của Dock: Thanh Tìm Lộ Trình Tránh Ngập + Nút CTA Báo Ngập Hiện Trường */}
+            <div className="flex items-stretch gap-2">
               <button
                 type="button"
                 onClick={() => {
@@ -399,52 +435,52 @@ export default function OceanFloodHomePage() {
                   setSelectedCrowdReport(null);
                   setIsRouteDrawerOpen(true);
                 }}
-                className="wet-cta-target w-full px-3 py-2 rounded-2xl libre-glass border border-slate-900/15 dark:border-white/20 shadow-xl flex items-center gap-2 text-left hover:border-blue-500 transition group"
+                className="flex-1 min-w-0 px-3 py-2.5 rounded-2xl bg-slate-100/90 dark:bg-slate-900/90 hover:bg-slate-200/80 dark:hover:bg-slate-800/90 border border-slate-200/90 dark:border-white/10 flex items-center gap-2.5 text-left transition group active:scale-[0.99]"
               >
-                <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow group-hover:scale-105 transition">
+                <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm shadow-blue-600/30 group-hover:scale-105 transition">
                   <Search className="w-4 h-4" />
                 </div>
                 <div className="overflow-hidden min-w-0">
                   <div className="text-xs font-extrabold text-slate-900 dark:text-white truncate">
-                    Tìm đường né ngập ({vehicleType === 'car' ? '🚗 Ô tô' : '🏍️ Xe máy'})
+                    Tìm đường né ngập ({vehicleType === 'car' ? 'Ô tô' : 'Xe máy'})
                   </div>
-                  <div className="text-[10px] text-slate-600 dark:text-slate-300 truncate">
+                  <div className="text-[10.5px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
                     {activeRoutePlan
-                      ? `+${activeRoutePlan.routes.recommended_safe_route.extra_time_min}p né ngập • Chạm để xem`
-                      : 'So sánh đường ngập vs đường an toàn'}
+                      ? `Đang bật: +${activeRoutePlan.routes.recommended_safe_route.extra_time_min} phút né ngập • Chạm để xem`
+                      : 'So sánh đường ngập vs lộ trình an toàn'}
                   </div>
                 </div>
               </button>
+
+              {/* Nút CTA Khẩn cấp: Báo ngập (1 icon duy nhất, phân cấp thị giác rõ ràng) */}
+              <button
+                type="button"
+                onClick={() => setIsReportModalOpen(true)}
+                className="px-4 py-2.5 rounded-2xl bg-gradient-to-br from-red-500 to-orange-600 hover:from-red-600 hover:to-orange-500 active:scale-95 text-white font-extrabold text-xs shadow-lg shadow-red-600/30 border border-white/25 flex flex-col items-center justify-center gap-1 shrink-0 transition"
+              >
+                <Camera className="w-4 h-4 shrink-0" />
+                <span>Báo ngập</span>
+              </button>
             </div>
 
-            {/* Cụm bên phải: Nút FAB Khẩn cấp "📸 Báo ngập" (>= 56px chuẩn tay ướt) */}
-            <button
-              type="button"
-              onClick={() => setIsReportModalOpen(true)}
-              className="pointer-events-auto wet-cta-target px-3.5 py-3 rounded-2xl bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 active:scale-95 text-white font-extrabold text-xs shadow-2xl shadow-red-600/40 border-2 border-white/85 flex flex-col items-center justify-center gap-0.5 shrink-0 transition"
-            >
-              <Camera className="w-5 h-5 shrink-0" />
-              <span>📸 Báo ngập</span>
-            </button>
-          </div>
-
-          {/* Footer Disclaimer Pháp lý & Bảo vệ dữ liệu vị trí (Tuân thủ Rule 7 & NĐ 13/2023/NĐ-CP) */}
-          <footer className="pointer-events-auto mx-auto w-full libre-glass rounded-xl px-2 py-1 border border-slate-900/10 dark:border-white/10 text-[9.5px] text-slate-600 dark:text-slate-400 flex items-center justify-between gap-1.5">
-            <span className="flex items-center gap-1 truncate">
-              <AlertCircle className="w-3 h-3 text-amber-500 shrink-0" />
-              <span className="truncate">
-                Dự báo 1–3h &amp; lộ trình mang tính tham khảo hỗ trợ quyết định.
+            {/* Dòng chú thích pháp lý & bảo mật GPS tối giản (Rule 7 & NĐ 13/2023/NĐ-CP) */}
+            <div className="flex items-center justify-between gap-2 pt-0.5 px-1 text-[10px] text-slate-500 dark:text-slate-400 border-t border-slate-200/60 dark:border-white/8">
+              <span className="flex items-center gap-1 truncate">
+                <AlertCircle className="w-3 h-3 text-amber-500 shrink-0" />
+                <span className="truncate">
+                  Dự báo 1–3h &amp; lộ trình mang tính tham khảo hỗ trợ quyết định.
+                </span>
               </span>
-            </span>
-            <button
-              type="button"
-              onClick={() => setShowGpsConsentModal(true)}
-              className="font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-0.5 shrink-0"
-            >
-              <ShieldCheck className="w-3 h-3" />
-              <span>NĐ13/GPS</span>
-            </button>
-          </footer>
+              <button
+                type="button"
+                onClick={() => setShowGpsConsentModal(true)}
+                className="font-semibold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-0.5 shrink-0"
+              >
+                <ShieldCheck className="w-3 h-3" />
+                <span>NĐ13/GPS</span>
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* 5. THẺ CHI TIẾT ĐIỂM NGẬP NGÔN NGỮ KÉP (O3) */}
@@ -513,7 +549,7 @@ export default function OceanFloodHomePage() {
             aria-modal="true"
             aria-label="Thông báo bảo vệ dữ liệu vị trí cá nhân theo Nghị định 13/2023/NĐ-CP"
           >
-            <div className="w-full max-w-md libre-glass rounded-3xl border border-slate-900/15 dark:border-white/20 shadow-2xl p-4 space-y-3">
+            <div className="w-full max-w-md libre-glass rounded-3xl border border-slate-200 dark:border-white/20 shadow-2xl p-4 space-y-3">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <div className="w-9 h-9 rounded-2xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow">
@@ -550,7 +586,7 @@ export default function OceanFloodHomePage() {
                     ngập cộng đồng (chống báo cáo giả từ xa).
                   </li>
                 </ul>
-                <p className="p-2 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-[11px] text-emerald-900 dark:text-emerald-200 font-medium">
+                <p className="p-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-[11px] text-emerald-900 dark:text-emerald-200 font-medium">
                   🔒 <strong>Cam kết Quyền riêng tư:</strong> Tọa độ kiểm tra khoảng cách chỉ xử lý
                   tức thời trên bộ nhớ tạm (RAM), mã thiết bị được băm một chiều (
                   <code className="metric-mono">SHA-256</code>) và hệ thống{' '}
