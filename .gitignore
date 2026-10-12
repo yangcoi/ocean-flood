@@ -1,0 +1,40 @@
+# Môi trường & Khóa bí mật (Tuyệt đối không commit)
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# Dependencies
+node_modules/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Build & Tạm thời
+dist/
+build/
+.cache/
+.parcel-cache/
+*.log
+
+# Dữ liệu GIS dung lượng lớn & dữ liệu thô (Raw Data)
+data/raw/
+data/cache/
+*.mbtiles
+*.pbf
+*.tiff
+*.tif
+*.shp
+*.shx
+*.dbf
+*.cpg
+
+# IDE & Hệ điều hành
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
