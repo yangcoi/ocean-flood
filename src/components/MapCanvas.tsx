@@ -684,13 +684,23 @@ export default function MapCanvas({
       markersRef.current.push(marker);
     });
 
-    // 3. Vị trí GPS người dùng
+    // 3. Vị trí GPS người dùng (Chấm xanh Radar nổi bật kiểu Google Maps + Nhãn "Vị trí của bạn")
     if (userGpsLocation) {
       const gpsEl = document.createElement('div');
-      gpsEl.className =
-        'w-4 h-4 rounded-full bg-[#1A73E8] border-2 border-white shadow-lg ring-4 ring-blue-500/35';
+      gpsEl.className = 'pointer-events-none z-35';
+      gpsEl.innerHTML = `
+        <div class="relative flex flex-col items-center">
+          <div class="mb-1 px-2.5 py-0.5 rounded-full bg-[#1A73E8] text-white font-extrabold text-[11px] shadow-lg border-2 border-white whitespace-nowrap">
+            📍 Vị trí của bạn
+          </div>
+          <div class="relative w-10 h-10 flex items-center justify-center">
+            <span class="absolute inset-0 rounded-full bg-blue-500/40 animate-ping"></span>
+            <span class="w-5 h-5 rounded-full bg-[#1A73E8] border-[3px] border-white shadow-[0_0_16px_rgba(26,115,232,0.9)]"></span>
+          </div>
+        </div>
+      `;
       markersRef.current.push(
-        new maplibregl.Marker({ element: gpsEl })
+        new maplibregl.Marker({ element: gpsEl, anchor: 'center' })
           .setLngLat(userGpsLocation)
           .addTo(map)
       );
@@ -711,6 +721,18 @@ export default function MapCanvas({
     onSelectCrowdReport,
     onOpenSecurityCamera,
   ]);
+
+  // Tự động phóng bản đồ tới vị trí GPS của người dùng ngay khi bật GPS
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !isMapLoaded || !userGpsLocation) return;
+    map.flyTo({
+      center: userGpsLocation,
+      zoom: 15.6,
+      duration: 750,
+      essential: true,
+    });
+  }, [userGpsLocation, isMapLoaded]);
 
   // Phóng thẳng bản đồ tới tọa độ Camera khi người dùng bấm chọn
   useEffect(() => {

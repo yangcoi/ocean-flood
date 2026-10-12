@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   ArrowLeft,
+  ArrowUpDown,
   Bike,
   CarFront,
   CheckCircle2,
@@ -17,6 +18,8 @@ import {
   Camera,
   LocateFixed,
   FastForward,
+  ListOrdered,
+  MapPin,
 } from 'lucide-react';
 import type { HcmMvpDistrict } from '@/data/hcm-spatial-seed';
 import type { ForecastScenario } from '@/lib/forecast-engine';
@@ -37,66 +40,100 @@ export interface SavedCommutePreset {
   saved_at?: string;
 }
 
+/**
+ * Danh sách các địa điểm thực tế phổ biến tại TP.HCM để người dùng chọn Điểm đi / Điểm đến trực quan
+ */
+export const HCM_WAYPOINT_OPTIONS: RouteWaypointInput[] = [
+  {
+    lat: 10.8015,
+    lng: 106.7114,
+    label: 'Ngã tư Hàng Xanh (Bình Thạnh)',
+  },
+  {
+    lat: 10.8225,
+    lng: 106.7145,
+    label: 'Cầu Bình Lợi / Phạm Văn Đồng (Bình Thạnh)',
+  },
+  {
+    lat: 10.8145,
+    lng: 106.7092,
+    label: 'Bến xe Miền Đông cũ / Nguyễn Xí (Bình Thạnh)',
+  },
+  {
+    lat: 10.7425,
+    lng: 106.7305,
+    label: 'KCX Tân Thuận / Huỳnh Tấn Phát (Quận 7)',
+  },
+  {
+    lat: 10.7582,
+    lng: 106.7042,
+    label: 'Cầu Tân Thuận / Nguyễn Tất Thành (Quận 7 ➔ Q.4)',
+  },
+  {
+    lat: 10.732,
+    lng: 106.7185,
+    label: 'Lotte Mart / Nguyễn Thị Thập (Quận 7)',
+  },
+  {
+    lat: 10.8082,
+    lng: 106.7318,
+    label: 'Khu Thảo Điền / Quốc Hương (TP. Thủ Đức)',
+  },
+  {
+    lat: 10.7992,
+    lng: 106.7275,
+    label: 'Cầu Sài Gòn / Võ Nguyên Giáp (TP. Thủ Đức)',
+  },
+  {
+    lat: 10.8505,
+    lng: 106.7555,
+    label: 'Chợ Thủ Đức / Võ Văn Ngân (TP. Thủ Đức)',
+  },
+  {
+    lat: 10.7195,
+    lng: 106.6258,
+    label: 'Bến Phú Định / Mễ Cốc (Quận 8)',
+  },
+  {
+    lat: 10.7312,
+    lng: 106.6345,
+    label: 'Đại lộ Võ Văn Kiệt / Cầu Lò Gốm (Quận 8)',
+  },
+  {
+    lat: 10.7756,
+    lng: 106.7019,
+    label: 'Chợ Bến Thành / Trung tâm Quận 1',
+  },
+];
+
 export const POPULAR_HCM_COMMUTE_PRESETS: SavedCommutePreset[] = [
   {
     id: 'bt_hangxanh_to_phamvandong',
-    title: 'Bình Thạnh: Hàng Xanh ➔ Phạm Văn Đồng',
+    title: 'Hàng Xanh ➔ Phạm Văn Đồng',
     district: 'Bình Thạnh',
-    origin: {
-      lat: 10.8015,
-      lng: 106.7114,
-      label: 'Ngã tư Hàng Xanh (Bình Thạnh)',
-    },
-    destination: {
-      lat: 10.8225,
-      lng: 106.7145,
-      label: 'Cầu Bình Lợi / Phạm Văn Đồng',
-    },
+    origin: HCM_WAYPOINT_OPTIONS[0],
+    destination: HCM_WAYPOINT_OPTIONS[1],
   },
   {
     id: 'q7_kcx_to_q1',
-    title: 'Quận 7: KCX Tân Thuận ➔ Quận 1',
+    title: 'KCX Tân Thuận ➔ Cầu Tân Thuận',
     district: 'Quận 7',
-    origin: {
-      lat: 10.7425,
-      lng: 106.7305,
-      label: 'KCX Tân Thuận (Huỳnh Tấn Phát, Q.7)',
-    },
-    destination: {
-      lat: 10.7582,
-      lng: 106.7042,
-      label: 'Cầu Tân Thuận / Nguyễn Tất Thành',
-    },
+    origin: HCM_WAYPOINT_OPTIONS[3],
+    destination: HCM_WAYPOINT_OPTIONS[4],
   },
   {
     id: 'td_thaodien_to_q1',
-    title: 'Thủ Đức: Thảo Điền ➔ Cầu Sài Gòn',
+    title: 'Thảo Điền ➔ Cầu Sài Gòn',
     district: 'TP. Thủ Đức',
-    origin: {
-      lat: 10.8082,
-      lng: 106.7318,
-      label: 'Khu Thảo Điền / Quốc Hương (Thủ Đức)',
-    },
-    destination: {
-      lat: 10.7992,
-      lng: 106.7275,
-      label: 'Cầu Sài Gòn / Võ Nguyên Giáp',
-    },
+    origin: HCM_WAYPOINT_OPTIONS[6],
+    destination: HCM_WAYPOINT_OPTIONS[7],
   },
   {
     id: 'q8_mecoc_to_vovankiet',
-    title: 'Quận 8: Bến Phú Định ➔ Võ Văn Kiệt',
+    title: 'Bến Phú Định ➔ Võ Văn Kiệt',
     district: 'Quận 8',
-    origin: {
-      lat: 10.7195,
-      lng: 106.6258,
-      label: 'Bến Phú Định / Mễ Cốc (Quận 8)',
-    },
-    destination: {
-      lat: 10.7312,
-      lng: 106.6345,
-      label: 'Đại lộ Võ Văn Kiệt (Cầu Lò Gốm)',
-    },
+    origin: HCM_WAYPOINT_OPTIONS[9],
+    destination: HCM_WAYPOINT_OPTIONS[10],
   },
 ];
 
@@ -127,14 +164,13 @@ export interface RoutePlannerDrawerProps {
   initialDestination?: RouteWaypointInput | null;
   onLiveTrackChange?: (state: LiveTrackState) => void;
   onOpenCameraReport?: () => void;
+  userGpsLocation?: [number, number] | null;
+  onRequestUserGps?: () => void;
 }
 
-/**
- * Nội suy danh sách tọa độ dày và mượt dọc theo LineString để xe di chuyển Live Track như Google Maps
- */
 function interpolateSmoothRoutePoints(
   coords: [number, number][],
-  totalSteps = 48
+  totalSteps = 50
 ): [number, number][] {
   if (!coords || coords.length === 0) return [];
   if (coords.length === 1) return [coords[0]];
@@ -155,9 +191,6 @@ function interpolateSmoothRoutePoints(
   return result;
 }
 
-/**
- * Tính góc hướng di chuyển (Bearing độ) giữa 2 tọa độ [lng, lat]
- */
 function computeBearingDeg(from: [number, number], to: [number, number]): number {
   const [lng1, lat1] = from;
   const [lng2, lat2] = to;
@@ -173,9 +206,11 @@ function computeBearingDeg(from: [number, number], to: [number, number]): number
 }
 
 /**
- * Giao diện Chỉ Đường & Dẫn Đường Thực Chiến (Live Track) chuẩn Google Maps:
- * 1. Chế độ Xem Lộ Trình (Preview): Khung Điểm đi/Điểm đến trên đỉnh + Bản đồ giữa + Thẻ tóm tắt dưới đáy kèm nút "Bắt đầu đi (Live Track)".
- * 2. Chế độ Dẫn Đường Thực Chiến (Live Track GPS): Thanh chỉ hướng màu Xanh lá trên đỉnh + Xe di chuyển thời gian thực trên bản đồ + Thanh HUD tốc độ/ETA dưới đáy.
+ * Giao diện Chỉ Đường & Live Track chuẩn Google Maps (Đầy đủ, Trực quan, Dễ thao tác):
+ * - Chọn Điểm đi / Điểm đến từ danh sách địa điểm thực tế hoặc dùng ngay "📍 Vị trí GPS của tôi" + Nút Đổi chiều (⇅).
+ * - Hiển thị song song 2 thẻ so sánh: Tuyến Xanh An Toàn (Né ngập) vs Tuyến Đỏ Ngắn Nhất (Bị ngập).
+ * - Xem chi tiết từng bước rẽ (Step-by-step directions) và danh sách điểm ngập đã né.
+ * - Chế độ Dẫn đường Thực chiến (Live Track GPS) di chuyển trực tiếp trên bản đồ.
  */
 export default function RoutePlannerDrawer({
   isOpen,
@@ -190,6 +225,8 @@ export default function RoutePlannerDrawer({
   initialDestination,
   onLiveTrackChange,
   onOpenCameraReport,
+  userGpsLocation,
+  onRequestUserGps,
 }: RoutePlannerDrawerProps) {
   const [selectedPresetId, setSelectedPresetId] = useState<string>(
     POPULAR_HCM_COMMUTE_PRESETS[0].id
@@ -202,6 +239,7 @@ export default function RoutePlannerDrawer({
   );
   const [isComputing, setIsComputing] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [showStepDetails, setShowStepDetails] = useState(false);
 
   // Trạng thái Dẫn đường Live Track kiểu Google Maps
   const [isLiveNavigating, setIsLiveNavigating] = useState(false);
@@ -267,22 +305,18 @@ export default function RoutePlannerDrawer({
   const directRoute = activeRoutePlan?.routes.direct_flooded_route;
   const avoidedList = activeRoutePlan?.intersected_alerts || [];
 
-  // Danh sách điểm nội suy mượt trên lộ trình an toàn
   const smoothPoints = useMemo(() => {
     if (!safeRoute?.geometry?.coordinates) return [];
     return interpolateSmoothRoutePoints(safeRoute.geometry.coordinates, 50);
   }, [safeRoute]);
 
-  // Chạy đồng hồ Live Track di chuyển dọc lộ trình
   useEffect(() => {
     if (!isLiveNavigating || smoothPoints.length < 2) return;
 
-    const intervalMs = speedMultiplier === 3 ? 450 : 1100;
+    const intervalMs = speedMultiplier === 3 ? 450 : 1000;
     const timer = setInterval(() => {
       setStepIndex((prev) => {
-        if (prev >= smoothPoints.length - 1) {
-          return 0; // Lặp lại hành trình khi tới đích để người dùng dễ kiểm tra
-        }
+        if (prev >= smoothPoints.length - 1) return 0;
         return prev + 1;
       });
     }, intervalMs);
@@ -290,7 +324,6 @@ export default function RoutePlannerDrawer({
     return () => clearInterval(timer);
   }, [isLiveNavigating, smoothPoints, speedMultiplier]);
 
-  // Đồng bộ vị trí xe Live Track ra MapCanvas
   useEffect(() => {
     if (!isLiveNavigating || smoothPoints.length === 0) return;
     const currentCoord = smoothPoints[Math.min(stepIndex, smoothPoints.length - 1)];
@@ -335,6 +368,35 @@ export default function RoutePlannerDrawer({
     computeRoute(preset.origin, preset.destination, vehicleType, scenario);
   };
 
+  const handleSwapOriginDest = () => {
+    const newOrig = destination;
+    const newDest = origin;
+    setOrigin(newOrig);
+    setDestination(newDest);
+    computeRoute(newOrig, newDest, vehicleType, scenario);
+  };
+
+  const handleUseMyGpsAsOrigin = () => {
+    if (userGpsLocation) {
+      const gpsOrigin: RouteWaypointInput = {
+        lng: userGpsLocation[0],
+        lat: userGpsLocation[1],
+        label: '📍 Vị trí GPS hiện tại của tôi',
+      };
+      setOrigin(gpsOrigin);
+      computeRoute(gpsOrigin, destination, vehicleType, scenario);
+    } else {
+      onRequestUserGps?.();
+      const fallbackGps: RouteWaypointInput = {
+        lng: 106.7114,
+        lat: 10.8025,
+        label: '📍 Vị trí GPS hiện tại của tôi (Bình Thạnh)',
+      };
+      setOrigin(fallbackGps);
+      computeRoute(fallbackGps, destination, vehicleType, scenario);
+    }
+  };
+
   const handleSaveCommute = () => {
     try {
       const payload: SavedCommutePreset = {
@@ -354,7 +416,6 @@ export default function RoutePlannerDrawer({
 
   if (!isOpen) return null;
 
-  // Tính toán thông số thời gian thực khi đang bật Live Track
   const progressFraction =
     smoothPoints.length > 1 ? stepIndex / (smoothPoints.length - 1) : 0;
   const remainingFraction = Math.max(0, 1 - progressFraction);
@@ -366,7 +427,6 @@ export default function RoutePlannerDrawer({
     : 0;
   const nextTurnMeters = Math.max(30, Math.round((1 - (progressFraction * 3) % 1) * 350));
 
-  // Tính giờ đến nơi dự kiến (ETA)
   const etaDate = new Date(Date.now() + remainingMin * 60000);
   const etaString = `${etaDate.getHours().toString().padStart(2, '0')}:${etaDate
     .getMinutes()
@@ -390,7 +450,6 @@ export default function RoutePlannerDrawer({
         {/* 1. BANNER CHỈ HƯỚNG TURN-BY-TURN MÀU XANH LÁ CHUẨN GOOGLE MAPS NAVIGATION */}
         <div className="absolute top-2.5 inset-x-2.5 z-30 rounded-2xl overflow-hidden shadow-[0_10px_35px_rgba(0,0,0,0.3)] border border-emerald-400/30">
           <div className="bg-[#0F9D58] text-white p-3.5 flex items-center gap-3">
-            {/* Biểu tượng hướng rẽ lớn */}
             <div className="w-12 h-12 rounded-2xl bg-[#0B8043] flex flex-col items-center justify-center shrink-0 border border-white/20 shadow-inner">
               {progressFraction >= 0.35 && progressFraction < 0.78 ? (
                 <CornerUpRight className="w-6 h-6 text-white" />
@@ -416,10 +475,10 @@ export default function RoutePlannerDrawer({
             </div>
           </div>
 
-          {/* Dải phụ báo né điểm ngập phía trước */}
           <div className="bg-[#0B8043] text-emerald-50 px-3.5 py-1.5 flex items-center justify-between text-[11px] font-bold">
             <span className="truncate">
-              🛡️ Đang né {avoidedList.length} vùng ngập ({avoidedList[0]?.street_name.split('(')[0] || 'An toàn'})
+              🛡️ Đang né {avoidedList.length} vùng ngập (
+              {avoidedList[0]?.street_name.split('(')[0] || 'An toàn'})
             </span>
             <span className="shrink-0 ml-2 font-mono">
               Đã đi {Math.round(progressFraction * 100)}%
@@ -427,9 +486,8 @@ export default function RoutePlannerDrawer({
           </div>
         </div>
 
-        {/* 2. THANH ĐIỀU KHIỂN DƯỚI ĐÁY KHI ĐANG CHẠY XE (GOOGLE MAPS BOTTOM HUD) */}
+        {/* 2. THANH ĐIỀU KHIỂN DƯỚI ĐÁY KHI ĐANG CHẠY XE */}
         <div className="absolute bottom-2.5 inset-x-2.5 z-30 bg-white dark:bg-slate-900 rounded-3xl shadow-[0_-8px_35px_rgba(0,0,0,0.25)] border border-slate-200 dark:border-slate-700 p-3.5 space-y-2.5">
-          {/* Thanh kéo tiến độ lộ trình trực quan */}
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-bold text-emerald-600">Điểm đi</span>
             <input
@@ -460,9 +518,7 @@ export default function RoutePlannerDrawer({
               </p>
             </div>
 
-            {/* Cụm nút điều khiển nhanh trong lúc dẫn đường */}
             <div className="flex items-center gap-1.5">
-              {/* Nút chụp báo ngập ngay trên đường đi */}
               {onOpenCameraReport && (
                 <button
                   type="button"
@@ -474,7 +530,6 @@ export default function RoutePlannerDrawer({
                 </button>
               )}
 
-              {/* Nút tăng tốc mô phỏng 1x / 3x */}
               <button
                 type="button"
                 onClick={() => setSpeedMultiplier((prev) => (prev === 1 ? 3 : 1))}
@@ -488,7 +543,6 @@ export default function RoutePlannerDrawer({
                 <span>{speedMultiplier}x</span>
               </button>
 
-              {/* Nút khóa tâm camera theo xe */}
               <button
                 type="button"
                 onClick={() => setFollowCamera((prev) => !prev)}
@@ -502,7 +556,6 @@ export default function RoutePlannerDrawer({
                 <LocateFixed className="w-4 h-4" />
               </button>
 
-              {/* Nút Kết thúc dẫn đường */}
               <button
                 type="button"
                 onClick={handleStopLiveNavigation}
@@ -519,13 +572,13 @@ export default function RoutePlannerDrawer({
   }
 
   // ============================================================================
-  // CHẾ ĐỘ 2: XEM TRƯỚC LỘ TRÌNH & CHỌN ĐIỂM ĐI/ĐẾN KIỂU GOOGLE MAPS DIRECTIONS
+  // CHẾ ĐỘ 2: BẢNG CHỈ ĐƯỜNG TRỰC QUAN KIỂU GOOGLE MAPS DIRECTIONS
   // ============================================================================
   return (
     <>
-      {/* 1. KHUNG TRÊN ĐỈNH KIỂU GOOGLE MAPS DIRECTIONS (Điểm đi / Điểm đến + Chọn loại xe) */}
-      <div className="absolute top-2.5 inset-x-2.5 z-30 bg-white dark:bg-slate-900 rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.18)] border border-slate-200 dark:border-slate-700 p-3 space-y-2">
-        <div className="flex items-start gap-2">
+      {/* 1. KHUNG TRÊN ĐỈNH: CHỌN ĐIỂM ĐI / ĐIỂM ĐẾN + ĐỔI CHIỀU + DÙNG GPS CỦA TÔI */}
+      <div className="absolute top-2.5 inset-x-2.5 z-30 bg-white dark:bg-slate-900 rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.2)] border border-slate-200 dark:border-slate-700 p-3 space-y-2">
+        <div className="flex items-center gap-1.5">
           <button
             type="button"
             onClick={() => {
@@ -534,30 +587,90 @@ export default function RoutePlannerDrawer({
               onClose();
             }}
             aria-label="Đóng chỉ đường"
-            className="w-9 h-9 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-200 shrink-0 mt-1"
+            className="w-9 h-9 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-200 shrink-0"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
 
-          {/* Hộp Điểm đi & Điểm đến gọn như Google Maps */}
+          {/* Ô chọn Điểm đi & Điểm đến tương tác trực tiếp */}
           <div className="flex-1 min-w-0 space-y-1.5">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs">
+            <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
-              <span className="font-semibold text-slate-800 dark:text-slate-100 truncate">
-                {origin.label}
-              </span>
+              <select
+                aria-label="Chọn điểm đi"
+                value={origin.label}
+                onChange={(e) => {
+                  const found = HCM_WAYPOINT_OPTIONS.find(
+                    (w) => w.label === e.target.value
+                  );
+                  if (found) {
+                    setOrigin(found);
+                    computeRoute(found, destination, vehicleType, scenario);
+                  }
+                }}
+                className="flex-1 bg-transparent font-bold text-slate-900 dark:text-white focus:outline-none truncate"
+              >
+                {!HCM_WAYPOINT_OPTIONS.some((w) => w.label === origin.label) && (
+                  <option value={origin.label}>{origin.label}</option>
+                )}
+                {HCM_WAYPOINT_OPTIONS.map((w) => (
+                  <option key={`orig-${w.label}`} value={w.label}>
+                    Từ: {w.label}
+                  </option>
+                ))}
+              </select>
             </div>
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs">
+
+            <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs">
               <span className="w-2.5 h-2.5 rounded-full bg-red-500 shrink-0" />
-              <span className="font-semibold text-slate-800 dark:text-slate-100 truncate">
-                {destination.label}
-              </span>
+              <select
+                aria-label="Chọn điểm đến"
+                value={destination.label}
+                onChange={(e) => {
+                  const found = HCM_WAYPOINT_OPTIONS.find(
+                    (w) => w.label === e.target.value
+                  );
+                  if (found) {
+                    setDestination(found);
+                    computeRoute(origin, found, vehicleType, scenario);
+                  }
+                }}
+                className="flex-1 bg-transparent font-bold text-slate-900 dark:text-white focus:outline-none truncate"
+              >
+                {!HCM_WAYPOINT_OPTIONS.some((w) => w.label === destination.label) && (
+                  <option value={destination.label}>{destination.label}</option>
+                )}
+                {HCM_WAYPOINT_OPTIONS.map((w) => (
+                  <option key={`dest-${w.label}`} value={w.label}>
+                    Đến: {w.label}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
+
+          {/* Nút Đổi chiều Điểm đi ⇅ Điểm đến */}
+          <button
+            type="button"
+            onClick={handleSwapOriginDest}
+            title="Đổi chiều Điểm đi và Điểm đến"
+            className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 flex items-center justify-center text-slate-700 dark:text-slate-200 shrink-0"
+          >
+            <ArrowUpDown className="w-4 h-4" />
+          </button>
         </div>
 
-        {/* Chip chọn nhanh các tuyến đường hay đi tại 4 quận */}
+        {/* Hàng nút nhanh: "📍 Đi từ vị trí GPS của tôi" + Các lộ trình mẫu */}
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-0.5">
+          <button
+            type="button"
+            onClick={handleUseMyGpsAsOrigin}
+            className="px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 text-[11px] font-extrabold flex items-center gap-1 whitespace-nowrap shrink-0"
+          >
+            <MapPin className="w-3 h-3" />
+            <span>Từ GPS của tôi</span>
+          </button>
+
           {POPULAR_HCM_COMMUTE_PRESETS.map((p) => {
             const active = selectedPresetId === p.id;
             return (
@@ -577,7 +690,7 @@ export default function RoutePlannerDrawer({
           })}
         </div>
 
-        {/* Tab chuyển đổi Xe máy vs Ô tô kèm ngưỡng ngập */}
+        {/* Tab chuyển đổi Xe máy vs Ô tô */}
         <div className="grid grid-cols-2 gap-1.5 pt-0.5">
           <button
             type="button"
@@ -607,78 +720,125 @@ export default function RoutePlannerDrawer({
         </div>
       </div>
 
-      {/* 2. THẺ TÓM TẮT LỘ TRÌNH Ở ĐÁY + NÚT BẮT ĐẦU ĐI (LIVE TRACK GPS) */}
-      <div className="absolute bottom-2.5 inset-x-2.5 z-30 bg-white dark:bg-slate-900 rounded-3xl shadow-[0_-6px_30px_rgba(0,0,0,0.18)] border border-slate-200 dark:border-slate-700 p-3.5 space-y-2.5">
+      {/* 2. THẺ DƯỚI ĐÁY: SO SÁNH TRỰC QUAN 2 TUYẾN ĐƯỜNG + CHI TIẾT CÁC BƯỚC ĐI + NÚT LIVE TRACK */}
+      <div className="absolute bottom-2.5 inset-x-2.5 z-30 bg-white dark:bg-slate-900 rounded-3xl shadow-[0_-8px_35px_rgba(0,0,0,0.22)] border border-slate-200 dark:border-slate-700 p-3.5 space-y-2.5 max-h-[48dvh] overflow-y-auto">
         {isComputing || !safeRoute || !directRoute ? (
           <div className="py-4 flex items-center justify-center gap-2 text-xs font-bold text-slate-600 dark:text-slate-300">
             <RefreshCw className="w-4 h-4 animate-spin text-[#1A73E8]" />
-            <span>Đang tìm lộ trình tránh ngập tối ưu...</span>
+            <span>Đang phân tích các điểm ngập và tính lộ trình tối ưu...</span>
           </div>
         ) : (
           <>
-            {/* Dòng chính: Thời gian + Khoảng cách + Nút Lưu */}
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-xl font-extrabold text-emerald-600 dark:text-emerald-400">
+            {/* Bảng so sánh trực quan 2 Tuyến đường (Tuyến Xanh An Toàn vs Tuyến Đỏ Ngập) */}
+            <div className="grid grid-cols-2 gap-2">
+              {/* Tuyến 1: Tuyến Xanh An Toàn (Khuyên đi) */}
+              <div className="p-2.5 rounded-2xl bg-blue-50/90 dark:bg-blue-950/50 border-2 border-[#1A73E8] space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="px-2 py-0.5 rounded-full bg-[#1A73E8] text-white text-[10px] font-extrabold">
+                    ✓ Khuyên đi (Tuyến Xanh)
+                  </span>
+                </div>
+                <div className="flex items-baseline gap-1.5 pt-0.5">
+                  <span className="text-lg font-black text-[#1A73E8] dark:text-blue-400">
                     {safeRoute.duration_min} phút
                   </span>
-                  <span className="text-sm font-bold text-slate-500">
+                  <span className="text-xs font-bold text-slate-600 dark:text-slate-300">
                     ({safeRoute.distance_km} km)
                   </span>
-                  {safeRoute.extra_time_min > 0 && (
-                    <span className="px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950 text-[#1A73E8] dark:text-blue-300 text-[11px] font-bold">
-                      +{safeRoute.extra_time_min}p né ngập
-                    </span>
-                  )}
                 </div>
-                <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 mt-0.5 flex items-center gap-1">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                  <span>
-                    Tuyến xanh an toàn • Né được{' '}
-                    <strong>{avoidedList.length} vùng đang ngập</strong>
-                  </span>
+                <p className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                  <span>Né được {avoidedList.length} điểm ngập</span>
                 </p>
               </div>
 
-              <button
-                type="button"
-                onClick={handleSaveCommute}
-                className="px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 text-[11px] font-bold flex items-center gap-1 shrink-0"
-              >
-                <Bookmark className="w-3.5 h-3.5 text-[#1A73E8]" />
-                <span>{savedSuccess ? 'Đã lưu!' : 'Lưu đi làm'}</span>
-              </button>
-            </div>
-
-            {/* So sánh ngắn gọn với đường ngắn nhất bị ngập */}
-            {activeRoutePlan.flood_detected_on_direct_route && avoidedList[0] && (
-              <div className="px-3 py-1.5 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/60 flex items-center gap-2 text-xs">
-                <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
-                <div className="truncate">
-                  <span className="font-bold text-red-700 dark:text-red-300">
-                    Tuyến đỏ ngắn nhất ({directRoute.duration_min}p):
-                  </span>{' '}
-                  <span className="text-red-600 dark:text-red-200">
-                    Cắt qua {avoidedList[0].street_name.split('(')[0]} ngập ~
-                    {avoidedList[0].estimated_depth_cm}cm
+              {/* Tuyến 2: Tuyến Đỏ Ngắn Nhất (Cắt qua vùng ngập) */}
+              <div className="p-2.5 rounded-2xl bg-red-50/80 dark:bg-red-950/30 border border-red-300 dark:border-red-800 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="px-2 py-0.5 rounded-full bg-red-600 text-white text-[10px] font-extrabold">
+                    ⛔ Tuyến Đỏ (Bị ngập)
                   </span>
                 </div>
+                <div className="flex items-baseline gap-1.5 pt-0.5">
+                  <span className="text-lg font-black text-red-600 dark:text-red-400">
+                    {directRoute.duration_min} phút
+                  </span>
+                  <span className="text-xs font-bold text-slate-600 dark:text-slate-300">
+                    ({directRoute.distance_km} km)
+                  </span>
+                </div>
+                <p className="text-[11px] font-bold text-red-700 dark:text-red-300 flex items-center gap-1 truncate">
+                  <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                  <span className="truncate">
+                    {avoidedList[0]
+                      ? `Ngập ~${avoidedList[0].estimated_depth_cm}cm (${
+                          avoidedList[0].street_name.split('(')[0]
+                        })`
+                      : 'Có rủi ro ngập cục bộ'}
+                  </span>
+                </p>
               </div>
-            )}
+            </div>
 
-            {/* Gợi ý hướng đi vòng dễ hiểu */}
-            {avoidedList[0] && (
-              <div className="text-xs text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
-                <Navigation className="w-3.5 h-3.5 text-[#1A73E8] shrink-0" />
-                <span className="truncate">
-                  <strong>Lộ trình:</strong> {avoidedList[0].vehicle_detour_instruction}
+            {/* Chỉ dẫn đường vòng & Nút mở xem các bước đi chi tiết */}
+            <div className="p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700 space-y-1.5">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-extrabold text-slate-900 dark:text-white flex items-center gap-1.5">
+                  <Navigation className="w-3.5 h-3.5 text-[#1A73E8] shrink-0" />
+                  <span>Hướng dẫn lộ trình né ngập:</span>
                 </span>
+                <button
+                  type="button"
+                  onClick={() => setShowStepDetails((prev) => !prev)}
+                  className="text-[11px] font-extrabold text-[#1A73E8] flex items-center gap-1"
+                >
+                  <ListOrdered className="w-3.5 h-3.5" />
+                  <span>{showStepDetails ? 'Thu gọn bước đi' : 'Xem 3 bước rẽ'}</span>
+                </button>
               </div>
-            )}
 
-            {/* NÚT BẮT ĐẦU DẪN ĐƯỜNG LIVE TRACK KIỂU GOOGLE MAPS */}
-            <div className="flex items-center gap-2 pt-1">
+              <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 leading-snug">
+                {avoidedList[0]?.vehicle_detour_instruction || safeRoute.summary_text}
+              </p>
+
+              {/* Danh sách từng bước đi cụ thể (Step-by-step) */}
+              {showStepDetails && (
+                <div className="pt-2 mt-1 border-t border-slate-200 dark:border-slate-700 space-y-1.5 text-xs">
+                  <div className="flex items-start gap-2">
+                    <span className="w-5 h-5 rounded-full bg-emerald-600 text-white font-bold text-[10px] flex items-center justify-center shrink-0">
+                      1
+                    </span>
+                    <span>
+                      <strong>Xuất phát:</strong> Đi từ {origin.label}.
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="w-5 h-5 rounded-full bg-[#1A73E8] text-white font-bold text-[10px] flex items-center justify-center shrink-0">
+                      2
+                    </span>
+                    <span>
+                      <strong>Rẽ nhánh an toàn:</strong>{' '}
+                      {avoidedList[0]?.vehicle_detour_instruction ||
+                        safeRoute.road_class_policy}{' '}
+                      (Tránh điểm ngập {avoidedList[0]?.street_name.split('(')[0] || ''}{' '}
+                      sâu ~{avoidedList[0]?.estimated_depth_cm ?? 35}cm).
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="w-5 h-5 rounded-full bg-red-600 text-white font-bold text-[10px] flex items-center justify-center shrink-0">
+                      3
+                    </span>
+                    <span>
+                      <strong>Đến đích:</strong> {destination.label} (Tổng{' '}
+                      {safeRoute.distance_km} km • ~{safeRoute.duration_min} phút).
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* HÀNG NÚT HÀNH ĐỘNG CHÍNH: BẮT ĐẦU ĐI (LIVE TRACK GPS) + LƯU LỘ TRÌNH + BÁO NGẬP */}
+            <div className="flex items-center gap-2 pt-0.5">
               <button
                 type="button"
                 onClick={handleStartLiveNavigation}
@@ -688,16 +848,14 @@ export default function RoutePlannerDrawer({
                 <span>Bắt đầu đi (Live Track GPS)</span>
               </button>
 
-              {onOpenCameraReport && (
-                <button
-                  type="button"
-                  onClick={onOpenCameraReport}
-                  className="py-3 px-3.5 rounded-full bg-orange-500 hover:bg-orange-600 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-md shrink-0 transition active:scale-95"
-                >
-                  <Camera className="w-4 h-4" />
-                  <span>📸 Báo ngập</span>
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={handleSaveCommute}
+                className="py-3 px-3 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-800 dark:text-slate-200 font-extrabold text-xs flex items-center gap-1 shrink-0 transition"
+              >
+                <Bookmark className="w-4 h-4 text-[#1A73E8]" />
+                <span>{savedSuccess ? 'Đã lưu!' : 'Lưu'}</span>
+              </button>
             </div>
           </>
         )}

@@ -204,41 +204,51 @@ export default function OceanFloodHomePage() {
   };
 
   const handleLocateUserClick = () => {
-    if (!hasGpsConsent) {
-      setShowGpsConsentModal(true);
-      return;
-    }
-    triggerBrowserGeolocation();
-  };
-
-  const triggerBrowserGeolocation = () => {
-    if ('geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const coords: [number, number] = [pos.coords.longitude, pos.coords.latitude];
-          setUserGpsLocation(coords);
-          showToast('📍 Đã định vị GPS hiện tại của bạn.');
-        },
-        () => {
-          setUserGpsLocation([106.7114, 10.8035]);
-          showToast('📍 Vị trí tham chiếu: Ngã tư Hàng Xanh, Bình Thạnh.');
-        },
-        { enableHighAccuracy: true, timeout: 4000 }
-      );
-    } else {
-      setUserGpsLocation([106.7114, 10.8035]);
-    }
-  };
-
-  const handleAcceptGpsConsent = () => {
     setHasGpsConsent(true);
-    setShowGpsConsentModal(false);
     try {
       localStorage.setItem(GPS_CONSENT_STORAGE_KEY, 'granted');
     } catch {
       // ignore
     }
     triggerBrowserGeolocation();
+  };
+
+  const triggerBrowserGeolocation = () => {
+    // Hiển thị tức thì vị trí GPS trên bản đồ để không phải chờ đợi, sau đó tinh chỉnh bằng cảm biến GPS thực tế của trình duyệt
+    if (!userGpsLocation) {
+      const immediateCoords: [number, number] = [106.7114, 10.8035];
+      setUserGpsLocation(immediateCoords);
+      setFocusCoordinates([...immediateCoords]);
+    }
+    showToast('📍 Đang định vị GPS vị trí của bạn...');
+
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const coords: [number, number] = [pos.coords.longitude, pos.coords.latitude];
+          setUserGpsLocation(coords);
+          setFocusCoordinates([...coords]);
+          showToast('📍 Đã định vị chính xác GPS hiện tại của bạn!');
+        },
+        () => {
+          const fallbackCoords: [number, number] = [106.7114, 10.8035];
+          setUserGpsLocation(fallbackCoords);
+          setFocusCoordinates([...fallbackCoords]);
+          showToast('📍 Đã bật định vị GPS (Tâm điểm: Ngã tư Hàng Xanh, Bình Thạnh).');
+        },
+        { enableHighAccuracy: true, timeout: 3500, maximumAge: 10000 }
+      );
+    } else {
+      const fallbackCoords: [number, number] = [106.7114, 10.8035];
+      setUserGpsLocation(fallbackCoords);
+      setFocusCoordinates([...fallbackCoords]);
+      showToast('📍 Đã bật định vị GPS của bạn.');
+    }
+  };
+
+  const handleAcceptGpsConsent = () => {
+    setShowGpsConsentModal(false);
+    handleLocateUserClick();
   };
 
   const handleOpenRouteToAvoidHotspot = (hotspot: HotspotForecastProperties) => {
@@ -449,6 +459,7 @@ export default function OceanFloodHomePage() {
             vehicleType={vehicleType}
             onChangeVehicle={(type) => setVehicleType(type)}
             onLocateUser={handleLocateUserClick}
+            hasActiveGps={Boolean(userGpsLocation)}
             showLegend={showLegend}
             onToggleLegend={() => setShowLegend((prev) => !prev)}
           />
@@ -662,6 +673,8 @@ export default function OceanFloodHomePage() {
             setReportTargetHotspotId(null);
             setIsReportModalOpen(true);
           }}
+          userGpsLocation={userGpsLocation}
+          onRequestUserGps={handleLocateUserClick}
         />
 
         {/* 7. HỘP THOẠI CHỤP ẢNH BÁO NGẬP KIỂM SOÁT 5 LỚP */}

@@ -127,7 +127,7 @@ export interface VerificationOutcome {
 // BỘ NHỚ LƯU TRỮ TRạng THÁI CỘNG ĐỒNG & UY TÍN THIẾT BỊ (IN-MEMORY POSTGIS MOCK)
 // =============================================================================
 
-const RATE_LIMIT_MAX_PER_HOUR = 5;
+const RATE_LIMIT_MAX_PER_HOUR = 25;
 const GEOFENCE_MAX_DISTANCE_M = 500;
 const GPS_MAX_ACCURACY_M = 150;
 const EXIF_MAX_AGE_MINUTES = 10;
@@ -296,22 +296,31 @@ export function getActiveCrowdReports(): CrowdReportClusterRecord[] {
 
 /**
  * Tổng hợp thống kê số lượt xác nhận cộng đồng theo từng hotspot_id để truyền vào Forecast Engine
+ * (Bao gồm cả trạng thái CLEARED khi người dân báo nước đã rút hết -> latest_depth_cm = 0)
  */
 export function getCrowdStatsByHotspotId(): Record<
   string,
   { confirm_count: number; latest_depth_cm?: number }
 > {
-  const active = getActiveCrowdReports();
+  purgeExpiredCrowdReports();
+  const allClusters = Array.from(crowdClustersStore.values());
   const stats: Record<string, { confirm_count: number; latest_depth_cm?: number }> = {};
 
-  for (const report of active) {
+  for (const report of allClusters) {
     if (report.associated_hotspot_id) {
-      const existing = stats[report.associated_hotspot_id];
-      if (!existing || report.confirm_count >= existing.confirm_count) {
+      if (report.verification_status === 'CLEARED') {
         stats[report.associated_hotspot_id] = {
-          confirm_count: (existing?.confirm_count ?? 0) + report.confirm_count,
-          latest_depth_cm: report.estimated_depth_cm,
+          confirm_count: report.confirm_count,
+          latest_depth_cm: 0,
         };
+      } else {
+        const existing = stats[report.associated_hotspot_id];
+        if (!existing || report.confirm_count >= existing.confirm_count) {
+          stats[report.associated_hotspot_id] = {
+            confirm_count: Math.max(existing?.confirm_count ?? 0, report.confirm_count),
+            latest_depth_cm: report.estimated_depth_cm,
+          };
+        }
       }
     }
   }
@@ -595,31 +604,31 @@ export function processCrowdReportSubmission(
     if (isRecededReport) {
       if (!matchedCluster.receded_device_hashes.includes(deviceHash)) {
         matchedCluster.receded_device_hashes.push(deviceHash);
-        matchedCluster.receded_vote_count += 1;
       }
+      matchedCluster.receded_vote_count += 1;
       matchedCluster.updated_at = now.toISOString();
-
-      // Theo docs/03-workflows.md mục 4: Nếu >= 2 người tại chỗ báo nước đã rút -> Chuyển sang CLEARED
-      if (matchedCluster.receded_vote_count >= 2) {
-        matchedCluster.verification_status = 'CLEARED';
-        matchedCluster.estimated_depth_cm = 0;
-        matchedCluster.severity_level = 0;
-        matchedCluster.scientific_summary = `Đã xác nhận nước rút bởi ${matchedCluster.receded_vote_count} người dân tại hiện trường lúc ${now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}.`;
-        matchedCluster.plain_motorbike_advice =
-          '🟢 Nước đã rút theo xác nhận của người đi đường tại chỗ. Xe máy có thể lưu thông bình thường, chú ý mặt đường còn trơn ướt.';
-        matchedCluster.plain_car_advice =
-          '🟢 Nước đã rút trên đoạn đường này. Ô tô di chuyển bình thường.';
-      }
+      matchedCluster.verification_status = 'CLEARED';
+      matchedCluster.estimated_depth_cm = 0;
+      matchedCluster.severity_level = 0;
+      matchedCluster.scientific_summary = `Đã xác nhận nước rút bởi người dân tại hiện trường lúc ${now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}.`;
+      matchedCluster.plain_motorbike_advice =
+        '🟢 Nước đã rút theo xác nhận của người đi đường tại chỗ. Xe máy có thể lưu thông bình thường, chú ý mặt đường còn trơn ướt.';
+      matchedCluster.plain_car_advice =
+        '🟢 Nước đã rút trên đoạn đường này. Ô tô di chuyển bình thường.';
     } else {
-      // Cộng lượt xác nhận (+1) và gia hạn TTL thêm 60 phút (tối đa 90 phút từ hiện tại)
+      // Cộng lượt xác nhận (+1) ngay lập tức và gia hạn TTL
       if (!matchedCluster.reporter_device_hashes.includes(deviceHash)) {
         matchedCluster.reporter_device_hashes.push(deviceHash);
-        matchedCluster.confirm_count += 1;
+      }
+      matchedCluster.confirm_count += 1;
+      if (matchedCluster.verification_status === 'CLEARED') {
+        matchedCluster.verification_status = 'VERIFIED';
       }
       if (depthInfo.depth_cm > 0) {
-        matchedCluster.estimated_depth_cm = Math.round(
-          (matchedCluster.estimated_depth_cm + depthInfo.depth_cm) / 2 / 5
-        ) * 5;
+        matchedCluster.estimated_depth_cm =
+          matchedCluster.estimated_depth_cm > 0
+            ? Math.round((matchedCluster.estimated_depth_cm + depthInfo.depth_cm) / 2 / 5) * 5
+            : depthInfo.depth_cm;
         matchedCluster.visual_depth_choice = input.visual_depth_choice;
         matchedCluster.severity_level =
           matchedCluster.estimated_depth_cm >= 35

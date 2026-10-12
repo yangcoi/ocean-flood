@@ -8,49 +8,56 @@ export interface VehicleToggleProps {
   vehicleType: VehicleType;
   onChangeVehicle: (type: VehicleType) => void;
   onLocateUser: () => void;
+  hasActiveGps?: boolean;
   showLegend: boolean;
   onToggleLegend: () => void;
 }
 
 /**
- * Cụm nút điều khiển bản đồ nổi bên phải (Định vị GPS & Chú giải bản đồ CVD-Safe)
- * Tinh gọn chuẩn Apple Maps / LibreUIUX, nhường không gian cho Bản đồ Vector (>86% viewport)
- * (Công tắc chuyển đổi Xe máy / Ô tô đã được tích hợp đồng nhất vào Thanh điều khiển đáy Bottom Command Dock)
+ * Cụm nút điều khiển nổi bên phải bản đồ:
+ * - Nút "📍 Định vị GPS" rõ ràng, hiển thị trạng thái đang bật GPS xanh dương nổi bật.
+ * - Nút "Chú giải" bật/tắt bảng màu mức ngập.
  */
 export default function VehicleToggle({
   onLocateUser,
+  hasActiveGps = false,
   showLegend,
   onToggleLegend,
 }: VehicleToggleProps) {
   return (
     <aside
-      className="absolute right-3 bottom-36 z-20 flex flex-col items-end gap-2 pointer-events-none"
+      className="absolute right-2.5 top-28 z-20 flex flex-col items-end gap-2 pointer-events-none"
       aria-label="Điều khiển định vị GPS và chú giải bản đồ"
     >
-      <div className="pointer-events-auto flex flex-col gap-2">
+      <div className="pointer-events-auto flex flex-col items-end gap-2">
         <button
           type="button"
           onClick={onLocateUser}
           title="Định vị vị trí hiện tại của bạn (GPS)"
           aria-label="Định vị vị trí hiện tại của bạn"
-          className="w-11 h-11 rounded-2xl libre-glass border border-slate-200/80 dark:border-white/15 shadow-xl flex items-center justify-center text-blue-600 dark:text-blue-400 hover:bg-blue-500/15 active:scale-95 transition"
+          className={`px-3 py-2 rounded-full border shadow-lg flex items-center gap-1.5 text-xs font-extrabold transition active:scale-95 ${
+            hasActiveGps
+              ? 'bg-[#1A73E8] text-white border-white shadow-blue-500/40'
+              : 'bg-white/95 dark:bg-slate-900/95 text-[#1A73E8] dark:text-blue-400 border-slate-200 dark:border-slate-700'
+          }`}
         >
-          <LocateFixed className="w-5 h-5" />
+          <LocateFixed className={`w-4 h-4 ${hasActiveGps ? 'animate-pulse' : ''}`} />
+          <span>{hasActiveGps ? '📍 Đã bật GPS' : '📍 Bật GPS'}</span>
         </button>
 
         <button
           type="button"
           onClick={onToggleLegend}
-          title="Bật/tắt bảng chú giải ký hiệu ngập & Camera TTGT"
+          title="Bật/tắt bảng chú giải ký hiệu ngập"
           aria-label="Bật tắt chú giải bản đồ"
           aria-pressed={showLegend}
-          className={`w-11 h-11 rounded-2xl libre-glass border shadow-xl flex items-center justify-center transition active:scale-95 ${
+          className={`w-10 h-10 rounded-full border shadow-lg flex items-center justify-center transition active:scale-95 ${
             showLegend
-              ? 'bg-blue-600 text-white border-blue-400'
-              : 'border-slate-200/80 dark:border-white/15 text-slate-700 dark:text-slate-200 hover:bg-slate-500/15'
+              ? 'bg-[#1A73E8] text-white border-white'
+              : 'bg-white/95 dark:bg-slate-900/95 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200'
           }`}
         >
-          <Layers className="w-5 h-5" />
+          <Layers className="w-4 h-4" />
         </button>
       </div>
     </aside>

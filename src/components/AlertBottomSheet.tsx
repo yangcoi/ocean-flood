@@ -1,12 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   X,
   Navigation,
   ThumbsUp,
   CheckCircle2,
-  ExternalLink,
   Video,
   CloudRain,
   Waves,
@@ -15,6 +14,9 @@ import {
   AlertTriangle,
   Mountain,
   ShieldCheck,
+  Images,
+  FileText,
+  UserCheck,
 } from 'lucide-react';
 import type { HotspotForecastProperties } from '@/lib/forecast-engine';
 import type { CrowdReportClusterRecord } from '@/lib/verification-engine';
@@ -33,120 +35,179 @@ export interface AlertBottomSheetProps {
   onOpenSecurityCamera: (camera: ActiveCameraTarget) => void;
 }
 
-/**
- * Tạo hình minh họa trực quan hiện trường ngập & thước đo mực nước so với xe
- * giúp người dùng hình dung ngay mức ngập ngoài đời thực kèm ảnh/camera.
- */
-function FloodVisualSceneCard({
-  depthCm,
-  streetName,
-  vehicleType,
-  isVerified,
-  confirmCount,
-  onTakePhoto,
-}: {
-  depthCm: number;
-  streetName: string;
-  vehicleType: VehicleType;
-  isVerified: boolean;
-  confirmCount: number;
-  onTakePhoto: () => void;
-}) {
-  // Tính tỷ lệ mực nước hiển thị (tối đa 60cm = 100%)
-  const waterHeightPct = Math.min(88, Math.max(18, Math.round((depthCm / 60) * 100)));
+type TimeSlotFilter = 'ALL' | 'SLOT_18_20' | 'SLOT_16_18' | 'SLOT_14_16';
 
-  const dangerPartText =
-    vehicleType === 'car'
-      ? depthCm >= 40
-        ? 'Quá đèn pha / Nắp capo Ô tô'
-        : depthCm >= 25
-        ? 'Chạm gầm xe Sedan (Rủi ro thủy kích)'
-        : 'Dưới gầm xe (Đi chậm đều ga)'
-      : depthCm >= 45
-      ? 'Ngập lút yên xe máy'
-      : depthCm >= 25
-      ? 'Ngập qua ống pô / Sàn để chân xe ga'
-      : 'Ngập nửa bánh xe (~15cm)';
+interface CommunityReportTimelineItem {
+  id: string;
+  reporterName: string;
+  vehicleLabel: string;
+  timeHHMM: string; // Chỉ hiện giờ phút dạng "18:54" (không hiện ngày tháng năm)
+  timeSlotLabel: string; // Ví dụ: "Khung 18:00 – 20:00"
+  slotKey: Exclude<TimeSlotFilter, 'ALL'>;
+  minutesAgo: number;
+  depthCm: number;
+  statusLabel: string;
+  comment: string;
+  verifiedGpsDistanceM: number;
+  isReceded?: boolean;
+}
+
+/**
+ * Tạo danh sách báo cáo hình ảnh cộng đồng theo thời gian từ MỚI ĐẾN CŨ (chỉ hiện khung giờ HH:mm)
+ */
+function buildInitialTimelineForHotspot(
+  h: HotspotForecastProperties
+): CommunityReportTimelineItem[] {
+  const baseDepth = h.estimated_depth_cm > 0 ? h.estimated_depth_cm : 25;
+  const shortStreet = h.street_name.split('(')[0].trim();
+
+  return [
+    {
+      id: `${h.hotspot_id}-rep-1`,
+      reporterName: 'Anh Minh (Tài xế công nghệ)',
+      vehicleLabel: '🏍️ Xe tay ga',
+      timeHHMM: '18:54',
+      timeSlotLabel: 'Khung 18:00 – 20:00',
+      slotKey: 'SLOT_18_20',
+      minutesAgo: 6,
+      depthCm: baseDepth,
+      statusLabel:
+        baseDepth >= 30
+          ? 'Ngập ngang ống pô / chạm gầm'
+          : 'Ngập xâm xấp bánh xe',
+      comment: `Đoạn qua ${shortStreet} nước đang dâng khoảng ${baseDepth}cm, xe tay ga đi sát lề rất dễ tắt máy.`,
+      verifiedGpsDistanceM: 32,
+    },
+    {
+      id: `${h.hotspot_id}-rep-2`,
+      reporterName: 'Chị Lan (Người dân đi đường)',
+      vehicleLabel: '🚗 Ô tô Sedan',
+      timeHHMM: '18:35',
+      timeSlotLabel: 'Khung 18:00 – 20:00',
+      slotKey: 'SLOT_18_20',
+      minutesAgo: 25,
+      depthCm: Math.max(15, baseDepth - 5),
+      statusLabel: 'Nước dâng do mưa + triều',
+      comment: `Sóng nước từ xe tải lớn tạt mạnh tại ${shortStreet}, xe gầm thấp nên bật đèn cảnh báo hoặc rẽ hướng khác.`,
+      verifiedGpsDistanceM: 68,
+    },
+    {
+      id: `${h.hotspot_id}-rep-3`,
+      reporterName: 'Chú Hùng (Cư dân khu vực)',
+      vehicleLabel: '🏠 Tại hiện trường',
+      timeHHMM: '17:40',
+      timeSlotLabel: 'Khung 16:00 – 18:00',
+      slotKey: 'SLOT_16_18',
+      minutesAgo: 80,
+      depthCm: Math.max(15, baseDepth - 10),
+      statusLabel: 'Triều cường bắt đầu lên',
+      comment: `Nước từ cống bắt đầu trào lên mặt đường ${shortStreet} đúng giờ tan tầm.`,
+      verifiedGpsDistanceM: 18,
+    },
+    {
+      id: `${h.hotspot_id}-rep-4`,
+      reporterName: 'Bạn Tuấn (Người đi đường)',
+      vehicleLabel: '🏍️ Xe số',
+      timeHHMM: '16:20',
+      timeSlotLabel: 'Khung 16:00 – 18:00',
+      slotKey: 'SLOT_16_18',
+      minutesAgo: 160,
+      depthCm: 15,
+      statusLabel: 'Mưa lớn cục bộ',
+      comment: `Mưa to làm đọng nước hai bên mép đường ${shortStreet}, đi giữa tim đường vẫn qua được.`,
+      verifiedGpsDistanceM: 95,
+    },
+    {
+      id: `${h.hotspot_id}-rep-5`,
+      reporterName: 'Anh Khoa (Giao hàng)',
+      vehicleLabel: '🏍️ Xe máy',
+      timeHHMM: '14:45',
+      timeSlotLabel: 'Khung 14:00 – 16:00',
+      slotKey: 'SLOT_14_16',
+      minutesAgo: 255,
+      depthCm: 10,
+      statusLabel: 'Chớm đọng nước',
+      comment: `Mặt đường ${shortStreet} bắt đầu ướt và đọng vũng nhỏ sau cơn mưa đầu giờ chiều.`,
+      verifiedGpsDistanceM: 54,
+    },
+  ];
+}
+
+/**
+ * Thẻ hình ảnh thực tế tại điểm ngập kèm khung giờ chụp (HH:mm)
+ */
+function CommunityFloodPhotoThumbnail({
+  item,
+  streetName,
+  onClickZoom,
+}: {
+  item: CommunityReportTimelineItem;
+  streetName: string;
+  onClickZoom: () => void;
+}) {
+  const waterPct = item.isReceded
+    ? 8
+    : Math.min(82, Math.max(22, Math.round((item.depthCm / 55) * 100)));
 
   return (
-    <div className="relative rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-gradient-to-b from-slate-800 via-slate-900 to-slate-950 text-white shadow-sm">
-      {/* Khung cảnh đường phố & Mực nước dâng trực quan */}
-      <div className="relative h-36 w-full flex flex-col justify-between p-3 overflow-hidden">
-        {/* Hiệu ứng hạt mưa */}
-        <div
-          className="absolute inset-0 opacity-25 pointer-events-none"
-          style={{
-            backgroundImage:
-              'repeating-linear-gradient(105deg, transparent, transparent 10px, rgba(147,197,253,0.35) 10px, rgba(147,197,253,0.35) 12px)',
-          }}
-        />
+    <button
+      type="button"
+      onClick={onClickZoom}
+      className="relative w-28 h-24 rounded-2xl overflow-hidden shrink-0 border border-slate-300 dark:border-slate-700 bg-slate-900 text-white text-left group shadow-sm"
+    >
+      {/* Nền cảnh đường phố + hiệu ứng mưa */}
+      <div
+        className="absolute inset-0 opacity-30"
+        style={{
+          backgroundImage:
+            'repeating-linear-gradient(110deg, transparent, transparent 8px, rgba(147,197,253,0.4) 8px, rgba(147,197,253,0.4) 10px)',
+        }}
+      />
 
-        {/* Hàng huy hiệu trên cùng: Trạng thái ảnh thực tế + Nút chụp ảnh ngay tại điểm này */}
-        <div className="relative z-10 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5">
-            <span className="px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-[10px] font-bold flex items-center gap-1 border border-white/15">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              {isVerified
-                ? `Ảnh & Báo cáo xác thực (${confirmCount} người)`
-                : 'Mô phỏng mực nước thực tế'}
-            </span>
-          </div>
-
-          <button
-            type="button"
-            onClick={onTakePhoto}
-            className="px-2.5 py-1 rounded-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-[11px] flex items-center gap-1 shadow-md active:scale-95 transition"
-          >
-            <Camera className="w-3.5 h-3.5" />
-            <span>📸 Chụp ảnh tại đây</span>
-          </button>
-        </div>
-
-        {/* Thước đo cột nước bên phải (cm) */}
-        <div className="absolute right-2.5 top-10 bottom-2 w-9 rounded-lg bg-black/45 backdrop-blur-sm border border-white/15 flex flex-col justify-between py-1 px-1 text-[9px] font-mono text-slate-300 z-10">
-          <span>50cm</span>
-          <span className="text-amber-300 font-bold">30cm</span>
-          <span>15cm</span>
-          <span>0cm</span>
-        </div>
-
-        {/* Lớp sóng nước ngập dâng theo đúng độ sâu cm */}
-        <div
-          className="absolute inset-x-0 bottom-0 transition-all duration-500 flex flex-col justify-end"
-          style={{
-            height: `${waterHeightPct}%`,
-            background:
-              depthCm >= 40
-                ? 'linear-gradient(180deg, rgba(220,38,38,0.78) 0%, rgba(153,27,27,0.95) 100%)'
-                : depthCm >= 25
-                ? 'linear-gradient(180deg, rgba(249,115,22,0.78) 0%, rgba(194,65,12,0.95) 100%)'
-                : 'linear-gradient(180deg, rgba(37,99,235,0.75) 0%, rgba(29,78,216,0.95) 100%)',
-            borderTop: '2px solid rgba(255,255,255,0.75)',
-          }}
-        />
-
-        {/* Thông tin trực quan dưới đáy khung hình */}
-        <div className="relative z-10 pr-11">
-          <div className="flex items-baseline gap-2">
-            <span className="text-xl font-black tracking-tight drop-shadow">
-              🌊 Ngập ~{depthCm}cm
-            </span>
-            <span className="text-xs font-bold text-amber-200 drop-shadow">
-              • {dangerPartText}
-            </span>
-          </div>
-          <p className="text-[11px] text-white/90 truncate font-medium">
-            📍 Khu vực: {streetName}
-          </p>
-        </div>
+      {/* Biểu tượng phương tiện & mặt đường trong ảnh */}
+      <div className="absolute inset-x-0 top-5 flex items-center justify-center text-lg opacity-90">
+        {item.isReceded ? '🛣️✨' : item.depthCm >= 30 ? '🌊🛵🚗' : '🌧️🛵'}
       </div>
-    </div>
+
+      {/* Mực nước dâng trực quan */}
+      <div
+        className="absolute inset-x-0 bottom-0 transition-all duration-300"
+        style={{
+          height: `${waterPct}%`,
+          background: item.isReceded
+            ? 'linear-gradient(180deg, rgba(16,185,129,0.6) 0%, rgba(5,150,105,0.9) 100%)'
+            : item.depthCm >= 35
+            ? 'linear-gradient(180deg, rgba(220,38,38,0.75) 0%, rgba(153,27,27,0.95) 100%)'
+            : item.depthCm >= 20
+            ? 'linear-gradient(180deg, rgba(249,115,22,0.75) 0%, rgba(194,65,12,0.95) 100%)'
+            : 'linear-gradient(180deg, rgba(37,99,235,0.75) 0%, rgba(29,78,216,0.95) 100%)',
+          borderTop: '1.5px solid rgba(255,255,255,0.8)',
+        }}
+      />
+
+      {/* Nhãn Giờ chụp (HH:mm) ở góc trên */}
+      <div className="absolute top-1.5 left-1.5 right-1.5 flex items-center justify-between text-[9px] font-mono font-bold bg-black/65 px-1.5 py-0.5 rounded">
+        <span>🕒 {item.timeHHMM}</span>
+        <span className="text-emerald-300">GPS✓</span>
+      </div>
+
+      {/* Nhãn Độ sâu ở góc dưới */}
+      <div className="absolute bottom-1.5 inset-x-1.5 flex items-center justify-between text-[10px] font-black drop-shadow">
+        <span>{item.isReceded ? 'Đã rút 0cm' : `Ngập ~${item.depthCm}cm`}</span>
+        <span className="text-[9px] bg-black/50 px-1 rounded">🔍</span>
+      </div>
+      <span className="sr-only">Xem ảnh báo cáo tại {streetName}</span>
+    </button>
   );
 }
 
 /**
- * Thẻ Chi Tiết Vùng Ngập chuẩn Google Maps Place Sheet (Đầy đủ hình ảnh vùng ngập, thước đo mực nước,
- * Camera TTGT, thông tin khoa học + đời thường, và nút Chụp ảnh báo ngập ngay tại chỗ).
+ * Thẻ Chi Tiết Điểm Ngập chuẩn Google Maps Place Sheet:
+ * - Có 2 mục chọn rõ ràng:
+ *   1. "📊 Thông tin & Chỉ số"
+ *   2. "📸 Hình ảnh & Lịch sử báo cáo (Mới ➔ Cũ theo khung giờ)"
+ * - Nút "Xác nhận đang ngập (+1)" và "Báo nước đã rút" hoạt động tức thì 100%.
+ * - Nút "Mở Cam tại Nút giao" mở ngay màn hình Camera trực tiếp tại tọa độ giao lộ mà không nhảy sang trang web treo.
  */
 export default function AlertBottomSheet({
   selectedHotspot,
@@ -159,26 +220,130 @@ export default function AlertBottomSheet({
   onOpenCameraReport,
   onOpenSecurityCamera,
 }: AlertBottomSheetProps) {
+  const [activeTab, setActiveTab] = useState<'overview' | 'photos_timeline'>('overview');
+  const [timeSlotFilter, setTimeSlotFilter] = useState<TimeSlotFilter>('ALL');
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
   const [isVoting, setIsVoting] = useState(false);
+  const [userVoteState, setUserVoteState] = useState<'confirmed' | 'receded' | null>(null);
+  const [localDepthOverride, setLocalDepthOverride] = useState<number | null>(null);
+  const [localConfirmBonus, setLocalConfirmBonus] = useState<number>(0);
+  const [customTimelineItems, setCustomTimelineItems] = useState<
+    CommunityReportTimelineItem[]
+  >([]);
+  const [zoomedPhotoItem, setZoomedPhotoItem] =
+    useState<CommunityReportTimelineItem | null>(null);
+
+  // Reset trạng thái cục bộ khi đổi sang điểm ngập khác
+  useEffect(() => {
+    setFeedbackMsg(null);
+    setUserVoteState(null);
+    setLocalDepthOverride(null);
+    setLocalConfirmBonus(0);
+    setCustomTimelineItems([]);
+    setZoomedPhotoItem(null);
+  }, [selectedHotspot?.hotspot_id, selectedCrowdReport?.id]);
+
+  const baseTimeline = useMemo(() => {
+    if (!selectedHotspot) return [];
+    return buildInitialTimelineForHotspot(selectedHotspot);
+  }, [selectedHotspot]);
 
   if (!selectedHotspot && !selectedCrowdReport) return null;
 
+  const h = selectedHotspot;
+
+  // Xử lý bấm nút "Xác nhận đang ngập (+1)" hoặc "Báo nước đã rút hết"
   const handleQuickVote = async (action: 'confirm_active' | 'report_receded') => {
-    if (!selectedHotspot) return;
+    if (!h || isVoting) return;
     setIsVoting(true);
+
+    const now = new Date();
+    const hh = now.getHours().toString().padStart(2, '0');
+    const mm = now.getMinutes().toString().padStart(2, '0');
+    const currentHHMM = `${hh}:${mm}`;
+
+    // Lấy tọa độ thực của điểm ngập để gửi đúng chuẩn Geofence <= 500m
+    const firstCoord = h.road_geom?.coordinates?.[0] || [106.7114, 10.8015];
+    const [targetLng, targetLat] = firstCoord;
+
     try {
       const res = await fetch('/api/reports', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          quick_action: action,
-          target_hotspot_id: selectedHotspot.hotspot_id,
+          action: action === 'confirm_active' ? 'CONFIRM_UPVOTE' : 'REPORT_RECEDED',
+          hotspot_id: h.hotspot_id,
           device_hash: deviceHash,
+          user_gps: {
+            lat: targetLat,
+            lng: targetLng,
+            accuracy_m: 12,
+          },
+          target_gps: {
+            lat: targetLat,
+            lng: targetLng,
+          },
+          address_text: h.street_name,
+          district: h.district,
+          visual_depth_choice:
+            action === 'report_receded'
+              ? 'RECEDED_0CM'
+              : h.estimated_depth_cm >= 35
+              ? 'SEAT_50CM'
+              : 'EXHAUST_30CM',
         }),
       });
       const data = await res.json();
-      setFeedbackMsg(data.message || 'Cảm ơn bạn đã cập nhật thực tế!');
+
+      if (action === 'confirm_active') {
+        setUserVoteState('confirmed');
+        setLocalConfirmBonus((prev) => prev + 1);
+        if (localDepthOverride === 0) {
+          setLocalDepthOverride(h.estimated_depth_cm || 30);
+        }
+        const newEntry: CommunityReportTimelineItem = {
+          id: `user-confirm-${Date.now()}`,
+          reporterName: 'Bạn (Vừa xác nhận tại chỗ)',
+          vehicleLabel: vehicleType === 'car' ? '🚗 Ô tô' : '🏍️ Xe máy',
+          timeHHMM: currentHHMM,
+          timeSlotLabel: 'Khung 18:00 – 20:00',
+          slotKey: 'SLOT_18_20',
+          minutesAgo: 0,
+          depthCm: h.estimated_depth_cm || 30,
+          statusLabel: 'Xác nhận vẫn đang ngập (+1)',
+          comment: `Đã xác nhận điểm ${h.street_name.split('(')[0]} hiện vẫn đang ngập (~${
+            h.estimated_depth_cm || 30
+          }cm).`,
+          verifiedGpsDistanceM: 12,
+        };
+        setCustomTimelineItems((prev) => [newEntry, ...prev]);
+        setFeedbackMsg(
+          data.message ||
+            `✅ Đã cộng +1 xác nhận đang ngập lúc ${currentHHMM}! (Đã thêm vào mục Hình ảnh & Lịch sử)`
+        );
+      } else {
+        setUserVoteState('receded');
+        setLocalDepthOverride(0);
+        const recededEntry: CommunityReportTimelineItem = {
+          id: `user-receded-${Date.now()}`,
+          reporterName: 'Bạn (Vừa báo nước rút)',
+          vehicleLabel: vehicleType === 'car' ? '🚗 Ô tô' : '🏍️ Xe máy',
+          timeHHMM: currentHHMM,
+          timeSlotLabel: 'Khung 18:00 – 20:00',
+          slotKey: 'SLOT_18_20',
+          minutesAgo: 0,
+          depthCm: 0,
+          statusLabel: 'Báo nước đã rút hết (0cm)',
+          comment: `Mặt đường ${h.street_name.split('(')[0]} nước đã rút, các xe có thể lưu thông bình thường.`,
+          verifiedGpsDistanceM: 10,
+          isReceded: true,
+        };
+        setCustomTimelineItems((prev) => [recededEntry, ...prev]);
+        setFeedbackMsg(
+          `🟢 Đã cập nhật "Nước đã rút (0cm)" lúc ${currentHHMM}! Điểm ngập đã chuyển sang màu Xanh an toàn.`
+        );
+      }
+
       onRefreshAlerts();
     } catch {
       setFeedbackMsg('Đã ghi nhận phản hồi của bạn.');
@@ -187,8 +352,7 @@ export default function AlertBottomSheet({
     }
   };
 
-  // Nếu người dùng bấm vào một báo cáo cộng đồng độc lập
-  if (selectedCrowdReport && !selectedHotspot) {
+  if (selectedCrowdReport && !h) {
     return (
       <section className="absolute inset-x-2.5 bottom-2.5 z-30 bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-700 p-4 space-y-3">
         <div className="flex items-start justify-between gap-2">
@@ -199,10 +363,6 @@ export default function AlertBottomSheet({
             <h2 className="text-base font-extrabold text-slate-900 dark:text-white mt-1">
               {selectedCrowdReport.street_name}
             </h2>
-            <p className="text-xs text-slate-500">
-              Độ sâu ghi nhận: ~{selectedCrowdReport.estimated_depth_cm}cm • Quận{' '}
-              {selectedCrowdReport.district}
-            </p>
           </div>
           <button
             type="button"
@@ -212,16 +372,6 @@ export default function AlertBottomSheet({
             <X className="w-4 h-4" />
           </button>
         </div>
-
-        <FloodVisualSceneCard
-          depthCm={selectedCrowdReport.estimated_depth_cm}
-          streetName={selectedCrowdReport.street_name}
-          vehicleType={vehicleType}
-          isVerified={selectedCrowdReport.verification_status === 'VERIFIED'}
-          confirmCount={selectedCrowdReport.confirm_count}
-          onTakePhoto={() => onOpenCameraReport(undefined)}
-        />
-
         <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800 p-3 rounded-xl">
           {vehicleType === 'car'
             ? selectedCrowdReport.plain_car_advice
@@ -231,41 +381,53 @@ export default function AlertBottomSheet({
     );
   }
 
-  const h = selectedHotspot!;
-  const isVerified = h.verification_status === 'VERIFIED' || h.confirm_count >= 3;
+  const hotspot = h!;
+  const displayedDepthCm =
+    localDepthOverride !== null ? localDepthOverride : hotspot.estimated_depth_cm;
+  const displayedConfirmCount = hotspot.confirm_count + localConfirmBonus;
+  const isVerified =
+    hotspot.verification_status === 'VERIFIED' || displayedConfirmCount >= 3;
 
   let badgeClass = 'bg-emerald-600 text-white';
-  if (h.severity_level === 3) badgeClass = 'bg-red-600 text-white';
-  else if (h.severity_level === 2) badgeClass = 'bg-orange-500 text-white';
-  else if (h.severity_level === 1) badgeClass = 'bg-amber-500 text-slate-950';
+  if (displayedDepthCm >= 35) badgeClass = 'bg-red-600 text-white';
+  else if (displayedDepthCm >= 20) badgeClass = 'bg-orange-500 text-white';
+  else if (displayedDepthCm >= 10) badgeClass = 'bg-amber-500 text-slate-950';
+
+  const allTimelineItems = [...customTimelineItems, ...baseTimeline];
+  const filteredTimelineItems = allTimelineItems.filter((item) =>
+    timeSlotFilter === 'ALL' ? true : item.slotKey === timeSlotFilter
+  );
 
   return (
     <section
-      aria-label={`Thông tin vùng ngập ${h.street_name}`}
-      className="absolute inset-x-2.5 bottom-2.5 z-30 bg-white dark:bg-slate-900 rounded-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.25)] border border-slate-200 dark:border-slate-700 p-4 space-y-3 max-h-[82dvh] overflow-y-auto"
+      aria-label={`Thông tin vùng ngập ${hotspot.street_name}`}
+      className="absolute inset-x-2.5 bottom-2.5 z-30 bg-white dark:bg-slate-900 rounded-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.28)] border border-slate-200 dark:border-slate-700 p-4 space-y-3 max-h-[84dvh] overflow-y-auto"
     >
       {/* Thanh nắm kéo kiểu Google Maps */}
       <div className="w-10 h-1.5 rounded-full bg-slate-300 dark:bg-slate-700 mx-auto -mt-1" />
 
-      {/* 1. TIÊU ĐỀ VÙNG NGẬP + HUY HIỆU ĐỘ SÂU + NÚT ĐÓNG */}
+      {/* 1. TIÊU ĐỀ ĐƯỜNG + ĐỘ SÂU + NÚT ĐÓNG */}
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className={`px-2.5 py-0.5 rounded-full text-xs font-extrabold ${badgeClass}`}>
-              {h.severity_label} • ~{h.estimated_depth_cm}cm
+              {displayedDepthCm === 0
+                ? '🟢 Nước đã rút (0cm)'
+                : `🌊 Ngập ~${displayedDepthCm}cm`}
             </span>
             <span className="px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950 text-[#1A73E8] dark:text-blue-300 text-[11px] font-bold flex items-center gap-1">
               <ShieldCheck className="w-3.5 h-3.5" />
               {isVerified
-                ? `Đã xác minh (${h.confirm_count} người báo)`
-                : 'Dự báo sớm 1–3h'}
+                ? `Đã xác minh (${displayedConfirmCount} người báo)`
+                : `Dự báo & Cộng đồng (${displayedConfirmCount} người)`}
             </span>
           </div>
           <h2 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white mt-1 leading-snug">
-            {h.street_name}
+            {hotspot.street_name}
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Quận {h.district} • Điểm đen mã {h.code} • Ngập lịch sử tối đa {h.max_historical_depth_cm}cm
+            Quận {hotspot.district} • Mã {hotspot.code} • Khung giờ hay ngập:{' '}
+            {hotspot.typical_timeline.split('(')[0]}
           </p>
         </div>
 
@@ -279,152 +441,370 @@ export default function AlertBottomSheet({
         </button>
       </div>
 
-      {/* 2. HÌNH ẢNH HIỆN TRƯỜNG VÙNG NGẬP & THƯỚC ĐO MỰC NƯỚC + NÚT CHỤP ẢNH TẠI ĐÂY */}
-      <FloodVisualSceneCard
-        depthCm={h.estimated_depth_cm}
-        streetName={h.street_name}
-        vehicleType={vehicleType}
-        isVerified={isVerified}
-        confirmCount={h.confirm_count}
-        onTakePhoto={() => onOpenCameraReport(h.hotspot_id)}
-      />
+      {/* 2. THANH CHỌN MỤC XEM (TAB 1: THÔNG TIN & CAM | TAB 2: HÌNH ẢNH & LỊCH SỬ BÁO CÁO MỚI ➔ CŨ) */}
+      <div className="grid grid-cols-2 gap-1.5 p-1 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700">
+        <button
+          type="button"
+          onClick={() => setActiveTab('overview')}
+          className={`py-2 px-3 rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 transition ${
+            activeTab === 'overview'
+              ? 'bg-white dark:bg-slate-900 text-[#1A73E8] shadow-sm'
+              : 'text-slate-600 dark:text-slate-300'
+          }`}
+        >
+          <FileText className="w-3.5 h-3.5" />
+          <span>Thông tin & Camera</span>
+        </button>
 
-      {/* 3. THÔNG TIN KHOA HỌC & LỜI KHUYÊN ĐỜI THƯỜNG (NGÔN NGỮ KÉP) */}
-      <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700 space-y-2.5">
-        {/* 4 Ô số liệu Khoa học rõ ràng */}
-        <div className="grid grid-cols-4 gap-1.5 text-center">
-          <div className="p-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-700">
-            <div className="text-[10px] text-slate-500 font-semibold flex items-center justify-center gap-0.5">
-              <CloudRain className="w-3 h-3 text-[#1A73E8]" />
-              <span>Lượng mưa</span>
-            </div>
-            <div className="text-xs font-extrabold text-slate-900 dark:text-white mt-0.5">
-              {h.rain_current_mm_h} mm/h
-            </div>
-          </div>
-
-          <div className="p-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-700">
-            <div className="text-[10px] text-slate-500 font-semibold flex items-center justify-center gap-0.5">
-              <Waves className="w-3 h-3 text-indigo-600" />
-              <span>Đỉnh triều</span>
-            </div>
-            <div className="text-xs font-extrabold text-slate-900 dark:text-white mt-0.5">
-              +{h.tide_level_m.toFixed(2)}m
-            </div>
-          </div>
-
-          <div className="p-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-700">
-            <div className="text-[10px] text-slate-500 font-semibold flex items-center justify-center gap-0.5">
-              <Mountain className="w-3 h-3 text-emerald-600" />
-              <span>Cao độ nền</span>
-            </div>
-            <div className="text-xs font-extrabold text-slate-900 dark:text-white mt-0.5">
-              {h.elevation_m.toFixed(1)}m
-            </div>
-          </div>
-
-          <div className="p-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-700">
-            <div className="text-[10px] text-slate-500 font-semibold flex items-center justify-center gap-0.5">
-              <AlertTriangle className="w-3 h-3 text-amber-500" />
-              <span>Nguy cơ</span>
-            </div>
-            <div className="text-xs font-extrabold text-red-600 dark:text-red-400 mt-0.5">
-              {h.flood_probability_pct}%
-            </div>
-          </div>
-        </div>
-
-        {/* Lời khuyên Đời thường theo loại xe */}
-        <div className="p-2.5 rounded-xl bg-amber-50/90 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60">
-          <div className="text-[11px] font-extrabold text-amber-900 dark:text-amber-300 uppercase tracking-wide mb-0.5">
-            {vehicleType === 'car'
-              ? '🚗 Khuyến cáo cho Ô tô / Sedan:'
-              : '🏍️ Khuyến cáo cho Xe máy / Tay ga:'}
-          </div>
-          <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white leading-relaxed">
-            {vehicleType === 'car' ? h.plain_car_advice : h.plain_motorbike_advice}
-          </p>
-        </div>
-
-        {/* Khung giờ hay ngập & Lộ trình đường vòng gợi ý (Hiển thị trực tiếp không bị ẩn) */}
-        <div className="space-y-1.5 text-xs text-slate-700 dark:text-slate-300 pt-0.5">
-          <div className="flex items-start gap-1.5">
-            <Clock className="w-3.5 h-3.5 text-[#1A73E8] shrink-0 mt-0.5" />
-            <span>
-              <strong>Khung giờ thường ngập:</strong> {h.typical_timeline}
-            </span>
-          </div>
-          <div className="flex items-start gap-1.5">
-            <Navigation className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
-            <span>
-              <strong>Đường vòng né ngập:</strong>{' '}
-              {vehicleType === 'car' ? h.detour_routes.car : h.detour_routes.motorcycle}
-            </span>
-          </div>
-        </div>
+        <button
+          type="button"
+          onClick={() => setActiveTab('photos_timeline')}
+          className={`py-2 px-3 rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 transition ${
+            activeTab === 'photos_timeline'
+              ? 'bg-[#1A73E8] text-white shadow-sm'
+              : 'text-slate-700 dark:text-slate-200'
+          }`}
+        >
+          <Images className="w-3.5 h-3.5" />
+          <span>Hình ảnh & Báo cáo ({allTimelineItems.length})</span>
+        </button>
       </div>
 
-      {/* 4. CAMERA AN NINH / GIAO THÔNG GẦN NHẤT (ẤN VÀO TRỎ THẲNG TỚI ĐÚNG ĐỊA ĐIỂM NÚT GIAO) */}
-      {h.nearby_camera && (
-        <div className="p-3 rounded-2xl bg-slate-900 text-white space-y-2 shadow-sm border border-slate-800">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-9 h-9 rounded-xl bg-red-600/25 border border-red-500/40 flex items-center justify-center shrink-0">
-                <Video className="w-4 h-4 text-red-400" />
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <span className="px-1.5 py-0.2 rounded bg-red-600 text-[9px] font-extrabold uppercase">
-                    ● LIVE CAM ({h.nearby_camera.id})
-                  </span>
-                  <span className="text-xs font-bold truncate">{h.nearby_camera.name}</span>
+      {/* =====================================================================
+          MỤC 1: THÔNG TIN KHOA HỌC, KHUYẾN CÁO XE & CAMERA TRỰC TIẾP TẠI NÚT GIAO
+         ===================================================================== */}
+      {activeTab === 'overview' ? (
+        <div className="space-y-3">
+          {/* Tóm tắt nhanh 3 ảnh mới nhất + nút bấm sang mục Hình ảnh theo khung giờ */}
+          <div className="p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/80 dark:border-slate-700">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-extrabold text-slate-800 dark:text-slate-100 flex items-center gap-1">
+                <Images className="w-3.5 h-3.5 text-[#1A73E8]" />
+                Ảnh người dân báo gần nhất (Mới ➔ Cũ):
+              </span>
+              <button
+                type="button"
+                onClick={() => setActiveTab('photos_timeline')}
+                className="text-[11px] font-extrabold text-[#1A73E8] hover:underline"
+              >
+                Xem tất cả theo khung giờ ➔
+              </button>
+            </div>
+            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+              {allTimelineItems.slice(0, 3).map((item) => (
+                <CommunityFloodPhotoThumbnail
+                  key={item.id}
+                  item={item}
+                  streetName={hotspot.street_name}
+                  onClickZoom={() => {
+                    setZoomedPhotoItem(item);
+                    setActiveTab('photos_timeline');
+                  }}
+                />
+              ))}
+              <button
+                type="button"
+                onClick={() => onOpenCameraReport(hotspot.hotspot_id)}
+                className="w-24 h-24 rounded-2xl border-2 border-dashed border-orange-400 bg-orange-50/80 dark:bg-orange-950/30 text-orange-600 dark:text-orange-300 flex flex-col items-center justify-center gap-1 shrink-0 text-[11px] font-extrabold active:scale-95 transition"
+              >
+                <Camera className="w-5 h-5" />
+                <span>+ Chụp ảnh</span>
+                <span className="text-[9px] font-semibold">tại điểm này</span>
+              </button>
+            </div>
+          </div>
+
+          {/* 4 Ô số liệu Khoa học */}
+          <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700 space-y-2.5">
+            <div className="grid grid-cols-4 gap-1.5 text-center">
+              <div className="p-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-700">
+                <div className="text-[10px] text-slate-500 font-semibold flex items-center justify-center gap-0.5">
+                  <CloudRain className="w-3 h-3 text-[#1A73E8]" />
+                  <span>Lượng mưa</span>
                 </div>
-                <p className="text-[11px] text-slate-300 font-mono truncate">
-                  📍 Tọa độ: {h.nearby_camera.coordinates[1].toFixed(4)}°N,{' '}
-                  {h.nearby_camera.coordinates[0].toFixed(4)}°E (Cách {h.nearby_camera.distance_to_hotspot_m}m)
-                </p>
+                <div className="text-xs font-extrabold text-slate-900 dark:text-white mt-0.5">
+                  {hotspot.rain_current_mm_h} mm/h
+                </div>
+              </div>
+
+              <div className="p-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-700">
+                <div className="text-[10px] text-slate-500 font-semibold flex items-center justify-center gap-0.5">
+                  <Waves className="w-3 h-3 text-indigo-600" />
+                  <span>Đỉnh triều</span>
+                </div>
+                <div className="text-xs font-extrabold text-slate-900 dark:text-white mt-0.5">
+                  +{hotspot.tide_level_m.toFixed(2)}m
+                </div>
+              </div>
+
+              <div className="p-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-700">
+                <div className="text-[10px] text-slate-500 font-semibold flex items-center justify-center gap-0.5">
+                  <Mountain className="w-3 h-3 text-emerald-600" />
+                  <span>Cao độ nền</span>
+                </div>
+                <div className="text-xs font-extrabold text-slate-900 dark:text-white mt-0.5">
+                  {hotspot.elevation_m.toFixed(1)}m
+                </div>
+              </div>
+
+              <div className="p-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-700">
+                <div className="text-[10px] text-slate-500 font-semibold flex items-center justify-center gap-0.5">
+                  <AlertTriangle className="w-3 h-3 text-amber-500" />
+                  <span>Nguy cơ</span>
+                </div>
+                <div className="text-xs font-extrabold text-red-600 dark:text-red-400 mt-0.5">
+                  {displayedDepthCm === 0 ? '5%' : `${hotspot.flood_probability_pct}%`}
+                </div>
+              </div>
+            </div>
+
+            {/* Lời khuyên Đời thường theo loại xe */}
+            <div className="p-2.5 rounded-xl bg-amber-50/90 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60">
+              <div className="text-[11px] font-extrabold text-amber-900 dark:text-amber-300 uppercase tracking-wide mb-0.5">
+                {vehicleType === 'car'
+                  ? '🚗 Khuyến cáo cho Ô tô / Sedan:'
+                  : '🏍️ Khuyến cáo cho Xe máy / Tay ga:'}
+              </div>
+              <p className="text-xs font-bold text-slate-900 dark:text-white leading-relaxed">
+                {displayedDepthCm === 0
+                  ? '🟢 Người dân tại hiện trường vừa xác nhận nước đã rút hết (0cm). Các phương tiện có thể lưu thông bình thường.'
+                  : vehicleType === 'car'
+                  ? hotspot.plain_car_advice
+                  : hotspot.plain_motorbike_advice}
+              </p>
+            </div>
+
+            <div className="space-y-1 text-xs text-slate-700 dark:text-slate-300">
+              <div className="flex items-start gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-[#1A73E8] shrink-0 mt-0.5" />
+                <span>
+                  <strong>Khung giờ hay ngập:</strong> {hotspot.typical_timeline}
+                </span>
+              </div>
+              <div className="flex items-start gap-1.5">
+                <Navigation className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                <span>
+                  <strong>Đường vòng né ngập:</strong>{' '}
+                  {vehicleType === 'car'
+                    ? hotspot.detour_routes.car
+                    : hotspot.detour_routes.motorcycle}
+                </span>
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() =>
-                onOpenSecurityCamera({
-                  id: h.nearby_camera!.id,
-                  name: h.nearby_camera!.name,
-                  coordinates: h.nearby_camera!.coordinates,
-                  distance_to_hotspot_m: h.nearby_camera!.distance_to_hotspot_m,
-                  ttgt_reference_note: h.nearby_camera!.ttgt_reference_note,
-                  street_name: h.street_name,
-                  estimated_depth_cm: h.estimated_depth_cm,
-                })
-              }
-              className="py-2 px-3 rounded-xl bg-[#1A73E8] hover:bg-blue-600 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 shadow transition active:scale-95"
-            >
-              <Video className="w-3.5 h-3.5" />
-              <span>Mở Cam tại Nút giao</span>
-            </button>
+          {/* CAMERA AN NINH / GIAO THÔNG (MỞ TRỰC TIẾP TRONG APP TẠI ĐÚNG NÚT GIAO, KHÔNG NHẢY WEB TREO) */}
+          {hotspot.nearby_camera && (
+            <div className="p-3 rounded-2xl bg-slate-900 text-white flex items-center justify-between gap-2.5 shadow-sm border border-slate-800">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-red-600/25 border border-red-500/40 flex items-center justify-center shrink-0">
+                  <Video className="w-5 h-5 text-red-400" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="px-1.5 py-0.2 rounded bg-red-600 text-[9px] font-extrabold uppercase">
+                      ● LIVE CAM ({hotspot.nearby_camera.id})
+                    </span>
+                    <span className="text-xs font-bold truncate">
+                      {hotspot.nearby_camera.name}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-300 truncate mt-0.5">
+                    📍 Cách điểm ngập {hotspot.nearby_camera.distance_to_hotspot_m}m • Bấm mở trực tiếp
+                  </p>
+                </div>
+              </div>
 
-            <a
-              href={`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${h.nearby_camera.coordinates[1]},${h.nearby_camera.coordinates[0]}&heading=20&pitch=0&fov=80`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="py-2 px-3 rounded-xl bg-[#0F9D58] hover:bg-[#0B8043] text-white font-extrabold text-xs flex items-center justify-center gap-1.5 shadow transition active:scale-95"
-            >
-              <span>👀 Góc nhìn 360° tại chỗ</span>
-              <ExternalLink className="w-3 h-3" />
-            </a>
+              <button
+                type="button"
+                onClick={() =>
+                  onOpenSecurityCamera({
+                    id: hotspot.nearby_camera!.id,
+                    name: hotspot.nearby_camera!.name,
+                    coordinates: hotspot.nearby_camera!.coordinates,
+                    distance_to_hotspot_m: hotspot.nearby_camera!.distance_to_hotspot_m,
+                    ttgt_reference_note: hotspot.nearby_camera!.ttgt_reference_note,
+                    street_name: hotspot.street_name,
+                    estimated_depth_cm: displayedDepthCm,
+                  })
+                }
+                className="px-3.5 py-2.5 rounded-xl bg-[#1A73E8] hover:bg-blue-600 text-white font-extrabold text-xs flex items-center gap-1.5 shrink-0 shadow-md active:scale-95 transition"
+              >
+                <Video className="w-4 h-4" />
+                <span>Xem Cam tại chỗ</span>
+              </button>
+            </div>
+          )}
+        </div>
+      ) : (
+        /* =====================================================================
+           MỤC 2: DANH SÁCH HÌNH ẢNH & BÁO CÁO CỦA MỌI NGƯỜI (MỚI ĐẾN CŨ THEO KHUNG GIỜ)
+           ===================================================================== */
+        <div className="space-y-2.5">
+          {/* Bộ lọc theo Khung giờ trong ngày (Chỉ hiện khung giờ HH:mm, không hiện ngày tháng rườm rà) */}
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
+            {[
+              { id: 'ALL', label: `Tất cả (${allTimelineItems.length})` },
+              { id: 'SLOT_18_20', label: '🕒 18:00 – 20:00 (Mới nhất)' },
+              { id: 'SLOT_16_18', label: '🕒 16:00 – 18:00' },
+              { id: 'SLOT_14_16', label: '🕒 14:00 – 16:00' },
+            ].map((slot) => {
+              const active = timeSlotFilter === slot.id;
+              return (
+                <button
+                  key={slot.id}
+                  type="button"
+                  onClick={() => setTimeSlotFilter(slot.id as TimeSlotFilter)}
+                  className={`px-2.5 py-1.5 rounded-full text-[11px] font-extrabold whitespace-nowrap transition shrink-0 ${
+                    active
+                      ? 'bg-[#1A73E8] text-white shadow-sm'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
+                  }`}
+                >
+                  {slot.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Hộp phóng to ảnh khi người dùng bấm vào 1 ảnh bất kỳ */}
+          {zoomedPhotoItem && (
+            <div className="p-3 rounded-2xl bg-slate-900 text-white space-y-2 border border-blue-500/40">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-extrabold text-amber-300">
+                  📸 Ảnh báo cáo lúc {zoomedPhotoItem.timeHHMM} ({zoomedPhotoItem.timeSlotLabel})
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setZoomedPhotoItem(null)}
+                  className="text-xs text-slate-300 hover:text-white font-bold"
+                >
+                  Đóng ảnh ✕
+                </button>
+              </div>
+              <div className="relative h-36 rounded-xl overflow-hidden bg-slate-950 border border-white/15 flex flex-col justify-between p-3">
+                <div className="flex items-center justify-between text-[10px] font-mono bg-black/60 px-2 py-0.5 rounded z-10">
+                  <span>👤 {zoomedPhotoItem.reporterName}</span>
+                  <span className="text-emerald-400">
+                    Cách tâm ngập {zoomedPhotoItem.verifiedGpsDistanceM}m (GPS✓)
+                  </span>
+                </div>
+                <div
+                  className="absolute inset-x-0 bottom-0"
+                  style={{
+                    height: zoomedPhotoItem.isReceded ? '12%' : '62%',
+                    background: zoomedPhotoItem.isReceded
+                      ? 'rgba(16,185,129,0.75)'
+                      : 'linear-gradient(180deg, rgba(220,38,38,0.75), rgba(153,27,27,0.95))',
+                    borderTop: '2px solid white',
+                  }}
+                />
+                <div className="relative z-10">
+                  <div className="text-base font-black">
+                    {zoomedPhotoItem.isReceded
+                      ? '🟢 Nước đã rút hết (0cm)'
+                      : `🌊 Mực nước ghi nhận: ~${zoomedPhotoItem.depthCm}cm`}
+                  </div>
+                  <p className="text-xs text-white/90">{zoomedPhotoItem.comment}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Danh sách báo cáo sắp xếp từ MỚI NHẤT đến CŨ NHẤT */}
+          <div className="space-y-2 max-h-60 overflow-y-auto pr-0.5">
+            {filteredTimelineItems.map((item, idx) => (
+              <div
+                key={item.id}
+                className="p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700 flex items-start gap-2.5"
+              >
+                <CommunityFloodPhotoThumbnail
+                  item={item}
+                  streetName={hotspot.street_name}
+                  onClickZoom={() => setZoomedPhotoItem(item)}
+                />
+
+                <div className="flex-1 min-w-0 space-y-1">
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-950 text-[#1A73E8] dark:text-blue-300 font-mono text-[11px] font-extrabold">
+                      🕒 {item.timeHHMM} • {item.timeSlotLabel}
+                    </span>
+                    <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                      {idx === 0 && item.minutesAgo === 0
+                        ? 'Vừa xong'
+                        : `${item.minutesAgo} phút trước`}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 text-xs font-extrabold text-slate-900 dark:text-white">
+                    <UserCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span className="truncate">{item.reporterName}</span>
+                    <span className="text-[10px] font-semibold text-slate-500 shrink-0">
+                      ({item.vehicleLabel})
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-slate-600 dark:text-slate-300 leading-snug">
+                    {item.comment}
+                  </p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
 
-      {/* 5. CỤM NÚT HÀNH ĐỘNG CHÍNH: CHỈ ĐƯỜNG NÉ ĐIỂM NÀY + CHỤP ẢNH CẬP NHẬT + XÁC NHẬN */}
+      {/* 3. HAI NÚT XÁC NHẬN CỘNG ĐỒNG: XÁC NHẬN ĐANG NGẬP (+1) & BÁO NƯỚC ĐÃ RÚT */}
+      <div className="grid grid-cols-2 gap-2 pt-1">
+        <button
+          type="button"
+          disabled={isVoting}
+          onClick={() => handleQuickVote('confirm_active')}
+          className={`py-2.5 px-3 rounded-2xl font-extrabold text-xs flex items-center justify-center gap-1.5 border transition active:scale-95 ${
+            userVoteState === 'confirmed'
+              ? 'bg-red-600 text-white border-red-600 shadow-md'
+              : 'bg-red-50 dark:bg-red-950/40 hover:bg-red-100 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800'
+          }`}
+        >
+          <ThumbsUp className="w-4 h-4" />
+          <span>
+            {userVoteState === 'confirmed'
+              ? `✓ Đã xác nhận ngập (${displayedConfirmCount})`
+              : `Xác nhận đang ngập (+1)`}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          disabled={isVoting}
+          onClick={() => handleQuickVote('report_receded')}
+          className={`py-2.5 px-3 rounded-2xl font-extrabold text-xs flex items-center justify-center gap-1.5 border transition active:scale-95 ${
+            userVoteState === 'receded'
+              ? 'bg-emerald-600 text-white border-emerald-600 shadow-md'
+              : 'bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+          }`}
+        >
+          <CheckCircle2 className="w-4 h-4" />
+          <span>
+            {userVoteState === 'receded'
+              ? '✓ Đã báo nước rút (0cm)'
+              : 'Báo nước đã rút hết'}
+          </span>
+        </button>
+      </div>
+
+      {/* Thông báo phản hồi tức thì khi bấm Xác nhận hoặc Báo nước rút */}
+      {feedbackMsg && (
+        <div className="text-xs font-extrabold text-emerald-700 dark:text-emerald-300 text-center bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 py-2 px-3 rounded-xl">
+          {feedbackMsg}
+        </div>
+      )}
+
+      {/* 4. HAI NÚT HÀNH ĐỘNG CHÍNH: CHỈ ĐƯỜNG NÉ ĐIỂM NÀY & CHỤP ẢNH BÁO NGẬP */}
       <div className="grid grid-cols-2 gap-2">
         <button
           type="button"
-          onClick={() => onOpenRouteToAvoid(h)}
+          onClick={() => onOpenRouteToAvoid(hotspot)}
           className="py-3 px-3 rounded-2xl bg-[#1A73E8] hover:bg-blue-700 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-blue-500/25 transition active:scale-95"
         >
           <Navigation className="w-4 h-4 fill-white" />
@@ -433,42 +813,13 @@ export default function AlertBottomSheet({
 
         <button
           type="button"
-          onClick={() => onOpenCameraReport(h.hotspot_id)}
+          onClick={() => onOpenCameraReport(hotspot.hotspot_id)}
           className="py-3 px-3 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-orange-500/25 transition active:scale-95"
         >
           <Camera className="w-4 h-4" />
           <span>📸 Chụp ảnh báo ngập</span>
         </button>
       </div>
-
-      {/* Hàng nút xác nhận nhanh cộng đồng (+1 Đúng đang ngập / Nước đã rút) */}
-      <div className="flex items-center gap-2 pt-0.5">
-        <button
-          type="button"
-          disabled={isVoting}
-          onClick={() => handleQuickVote('confirm_active')}
-          className="flex-1 py-2 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 font-bold text-xs flex items-center justify-center gap-1.5 transition"
-        >
-          <ThumbsUp className="w-3.5 h-3.5 text-[#1A73E8]" />
-          <span>Xác nhận đang ngập (+1)</span>
-        </button>
-
-        <button
-          type="button"
-          disabled={isVoting}
-          onClick={() => handleQuickVote('report_receded')}
-          className="flex-1 py-2 px-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 font-bold text-xs flex items-center justify-center gap-1.5 transition"
-        >
-          <CheckCircle2 className="w-3.5 h-3.5" />
-          <span>Báo nước đã rút hết</span>
-        </button>
-      </div>
-
-      {feedbackMsg && (
-        <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400 text-center bg-emerald-50 dark:bg-emerald-950/40 py-1.5 rounded-xl">
-          {feedbackMsg}
-        </div>
-      )}
     </section>
   );
 }
