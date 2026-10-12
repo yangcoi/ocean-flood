@@ -263,296 +263,321 @@ export default function OceanFloodHomePage() {
     setIsRouteDrawerOpen(true);
   };
 
+  // Chế độ khung hiển thị: Mặc định chuẩn Mobile-First (430px) ngay cả khi mở trên máy tính, có nút chuyển sang Toàn màn hình
+  const [isMobileViewportFrame, setIsMobileViewportFrame] = useState<boolean>(true);
+
   return (
-    <main className="relative w-screen h-dvh overflow-hidden select-none">
-      {/* 1. THANH TRẠNG THÁI MƯA, ĐỈNH TRIỀU PHÚ AN & BỘ CHỌN KỊCH BẢN (O1) */}
-      <TopStatusBar
-        scenario={scenario}
-        onScenarioChange={(sc) => setScenario(sc)}
-        selectedDistrict={selectedDistrict}
-        onDistrictChange={(dist) => setSelectedDistrict(dist)}
-        isDarkMode={isDarkMode}
-        onToggleDarkMode={() => setIsDarkMode((prev) => !prev)}
-        updatedAt={updatedAt}
-        weatherSourceLabel={weatherSourceLabel}
-        isFallbackWeather={isFallbackWeather}
-        tidePhuAn={tidePhuAn}
-        tideNhaBe={tideNhaBe}
-        districtRainfall={districtRainfall}
-        highRiskCount={highRiskCount}
-        isLoading={isLoadingAlerts}
-      />
-
-      {/* BANNER CẢNH BÁO OFFLINE (NẾU MẤT MẠNG - CHUẨN RULE 7) */}
-      {isOffline && (
-        <div
-          role="alert"
-          className="fixed top-20 inset-x-3 z-25 mx-auto max-w-xl px-3.5 py-2 rounded-2xl bg-amber-500 text-slate-950 font-bold text-xs shadow-xl flex items-center gap-2"
+    <div className="relative w-screen h-dvh bg-slate-950 flex flex-col items-center justify-center overflow-hidden select-none">
+      {/* Thanh chuyển đổi chế độ xem trên Desktop (Mobile-First 430px vs Toàn màn hình) */}
+      <div className="hidden sm:flex items-center justify-between w-full max-w-[430px] mb-1.5 px-2 text-xs text-slate-300">
+        <div className="flex items-center gap-1.5 font-bold">
+          <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span>📱 Giao diện Mobile-First PWA (Chuẩn 1 tay khi mưa ngập)</span>
+        </div>
+        <button
+          type="button"
+          onClick={() => setIsMobileViewportFrame((prev) => !prev)}
+          className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-blue-300 font-bold border border-slate-700 transition text-[11px]"
         >
-          <WifiOff className="w-4 h-4 shrink-0" />
-          <span>
-            ⚠️ Mất kết nối mạng hoặc phản hồi chậm. Đang hiển thị dữ liệu lưu tạm gần nhất —
-            tình trạng ngập thực tế có thể đã thay đổi, vui lòng thận trọng quan sát.
-          </span>
-        </div>
-      )}
-
-      {/* TOAST PHẢN HỒI NHANH */}
-      {toastMessage && (
-        <div
-          role="status"
-          className="fixed top-20 inset-x-3 z-35 mx-auto max-w-md px-4 py-2.5 rounded-2xl bg-emerald-600 text-white font-extrabold text-xs sm:text-sm shadow-2xl border border-emerald-300 flex items-center justify-between gap-2 animate-in fade-in duration-150"
-        >
-          <span>{toastMessage}</span>
-          <button
-            type="button"
-            onClick={() => setToastMessage(null)}
-            className="text-white/80 hover:text-white font-bold"
-          >
-            ✕
-          </button>
-        </div>
-      )}
-
-      {/* 2. BẢN ĐỒ TƯƠNG TÁC MAPLIBRE GL JS TOÀN MÀN HÌNH (>86% VIEWPORT - L0) */}
-      <MapCanvas
-        features={features}
-        crowdReports={crowdReports}
-        cameras={cameras}
-        selectedDistrict={selectedDistrict}
-        vehicleType={vehicleType}
-        isDarkMode={isDarkMode}
-        selectedHotspot={selectedHotspot}
-        onSelectHotspot={(hs) => {
-          setSelectedCrowdReport(null);
-          setIsRouteDrawerOpen(false);
-          setSelectedHotspot(hs);
-        }}
-        onSelectCrowdReport={(rep) => {
-          setSelectedHotspot(null);
-          setIsRouteDrawerOpen(false);
-          setSelectedCrowdReport(rep);
-        }}
-        activeRoutePlan={activeRoutePlan}
-        routeOrigin={routeOrigin}
-        routeDestination={routeDestination}
-        userGpsLocation={userGpsLocation}
-        showLegend={showLegend}
-        onCloseLegend={() => setShowLegend(false)}
-      />
-
-      {/* 3. CÔNG TẮC NỔI CHUYỂN ĐỔI XE MÁY (>=20CM) VS Ô TÔ (>=25CM + PHÓNG CHỮ +12%) (O2) */}
-      <VehicleToggle
-        vehicleType={vehicleType}
-        onChangeVehicle={(type) => setVehicleType(type)}
-        onLocateUser={handleLocateUserClick}
-        showLegend={showLegend}
-        onToggleLegend={() => setShowLegend((prev) => !prev)}
-      />
-
-      {/* 4. CỤM ĐIỀU KHIỂN DƯỚI ĐÁY (VÙNG NGÓN CÁI THUMB ZONE): TÌM ĐƯỜNG + LỘ TRÌNH ĐÃ LƯU + FAB BÁO NGẬP + DISCLAIMER */}
-      <div className="fixed inset-x-0 bottom-0 z-20 pointer-events-none flex flex-col gap-1.5 px-2.5 pb-1.5">
-        <div className="mx-auto w-full max-w-4xl flex items-end justify-between gap-2">
-          {/* Cụm bên trái: Thanh kích hoạt Tìm lộ trình tránh ngập & Nút 1 chạm Lộ trình đi làm hằng ngày */}
-          <div className="pointer-events-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-1.5 flex-1 max-w-xl">
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedHotspot(null);
-                setSelectedCrowdReport(null);
-                setIsRouteDrawerOpen(true);
-              }}
-              className="wet-cta-target flex-1 px-3.5 py-2.5 rounded-2xl libre-glass border border-slate-900/15 dark:border-white/20 shadow-xl flex items-center gap-2.5 text-left hover:border-blue-500 transition group"
-            >
-              <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow group-hover:scale-105 transition">
-                <Search className="w-4 h-4" />
-              </div>
-              <div className="overflow-hidden">
-                <div className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white truncate">
-                  Tìm lộ trình tránh ngập ({vehicleType === 'car' ? '🚗 Ô tô' : '🏍️ Xe máy'})
-                </div>
-                <div className="text-[11px] text-slate-600 dark:text-slate-300 truncate">
-                  {activeRoutePlan
-                    ? `Đang bật: +${activeRoutePlan.routes.recommended_safe_route.extra_time_min} phút né ngập • Chạm để xem`
-                    : 'So sánh đường ngắn nhất vs đường vòng ít rủi ro ngập'}
-                </div>
-              </div>
-            </button>
-
-            {/* Nút 1 chạm: Kiểm tra lộ trình đi làm hằng ngày (localStorage) */}
-            <button
-              type="button"
-              onClick={handleQuickSavedCommuteClick}
-              title="Mở nhanh Lộ trình đi làm hằng ngày bằng 1 chạm (Lưu trên máy)"
-              className="wet-touch-target px-3 py-2 rounded-2xl bg-amber-500/95 hover:bg-amber-400 text-slate-950 font-extrabold text-xs shadow-xl border border-amber-300 flex items-center justify-center gap-1.5 shrink-0 transition active:scale-95"
-            >
-              <Bookmark className="w-4 h-4 shrink-0 fill-slate-950" />
-              <span>🏠➔🏢 Đi làm (1 chạm)</span>
-            </button>
-          </div>
-
-          {/* Cụm bên phải: Nút FAB Khẩn cấp "📸 Báo ngập" (>= 56px chuẩn tay ướt) */}
-          <button
-            type="button"
-            onClick={() => setIsReportModalOpen(true)}
-            className="pointer-events-auto wet-cta-target px-4 sm:px-5 py-3 rounded-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 active:scale-95 text-white font-extrabold text-sm sm:text-base shadow-2xl shadow-red-600/40 border-2 border-white/85 flex items-center gap-2 shrink-0 transition"
-          >
-            <Camera className="w-5 h-5 shrink-0" />
-            <span>📸 Báo ngập</span>
-          </button>
-        </div>
-
-        {/* Footer Disclaimer Pháp lý & Bảo vệ dữ liệu vị trí (Tuân thủ Rule 7 & NĐ 13/2023/NĐ-CP) */}
-        <footer className="pointer-events-auto mx-auto w-full max-w-4xl libre-glass rounded-xl px-2.5 py-1 border border-slate-900/10 dark:border-white/10 text-[10px] sm:text-[11px] text-slate-600 dark:text-slate-400 flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5">
-          <span className="flex items-center gap-1">
-            <AlertCircle className="w-3 h-3 text-amber-500 shrink-0" />
-            <span>
-              <strong>Lưu ý an toàn (Rule 7):</strong> Dự báo 1–3h &amp; lộ trình gợi ý mang tính
-              tham khảo hỗ trợ quyết định, không khẳng định tuyệt đối 100%. Vui lòng quan sát biển
-              báo thực tế.
-            </span>
-          </span>
-          <button
-            type="button"
-            onClick={() => setShowGpsConsentModal(true)}
-            className="font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 ml-auto"
-          >
-            <ShieldCheck className="w-3 h-3" />
-            <span>Bảo mật GPS (NĐ 13/2023/NĐ-CP)</span>
-          </button>
-        </footer>
+          {isMobileViewportFrame ? '🖥️ Mở rộng toàn màn hình' : '📱 Thu về khung Mobile (430px)'}
+        </button>
       </div>
 
-      {/* 5. THẺ CHI TIẾT ĐIỂM NGẬP NGÔN NGỮ KÉP (O3) */}
-      <AlertBottomSheet
-        selectedHotspot={selectedHotspot}
-        selectedCrowdReport={selectedCrowdReport}
-        vehicleType={vehicleType}
-        deviceHash={deviceHash}
-        onClose={() => {
-          setSelectedHotspot(null);
-          setSelectedCrowdReport(null);
-        }}
-        onRefreshAlerts={fetchAlertsData}
-        onOpenRouteToAvoid={handleOpenRouteToAvoidHotspot}
-      />
+      {/* KHUNG ĐIỆN THOẠI MOBILE-FIRST (430px) HOẶC TOÀN MÀN HÌNH */}
+      <main
+        className={`relative overflow-hidden bg-slate-900 transition-all duration-200 ${
+          isMobileViewportFrame
+            ? 'w-full max-w-[430px] h-dvh sm:h-[92dvh] sm:rounded-[38px] sm:border-[6px] sm:border-slate-800 sm:shadow-[0_25px_70px_rgba(0,0,0,0.75)]'
+            : 'w-screen h-dvh'
+        }`}
+      >
+        {/* 1. THANH TRẠNG THÁI MƯA, ĐỈNH TRIỀU PHÚ AN & BỘ CHỌN KỊCH BẢN (O1) */}
+        <TopStatusBar
+          scenario={scenario}
+          onScenarioChange={(sc) => setScenario(sc)}
+          selectedDistrict={selectedDistrict}
+          onDistrictChange={(dist) => setSelectedDistrict(dist)}
+          isDarkMode={isDarkMode}
+          onToggleDarkMode={() => setIsDarkMode((prev) => !prev)}
+          updatedAt={updatedAt}
+          weatherSourceLabel={weatherSourceLabel}
+          isFallbackWeather={isFallbackWeather}
+          tidePhuAn={tidePhuAn}
+          tideNhaBe={tideNhaBe}
+          districtRainfall={districtRainfall}
+          highRiskCount={highRiskCount}
+          isLoading={isLoadingAlerts}
+        />
 
-      {/* 6. NGĂN TÌM LỘ TRÌNH TRÁNH NGẬP CHO XE MÁY & Ô TÔ (O4) */}
-      <RoutePlannerDrawer
-        isOpen={isRouteDrawerOpen}
-        onClose={() => setIsRouteDrawerOpen(false)}
-        vehicleType={vehicleType}
-        onChangeVehicle={(type) => setVehicleType(type)}
-        scenario={scenario}
-        selectedDistrict={selectedDistrict}
-        onSelectDistrict={(dist) => setSelectedDistrict(dist)}
-        activeRoutePlan={activeRoutePlan}
-        onRoutePlanComputed={(plan, orig, dest) => {
-          setActiveRoutePlan(plan);
-          setRouteOrigin(orig);
-          setRouteDestination(dest);
-          try {
-            const raw = localStorage.getItem(SAVED_COMMUTE_STORAGE_KEY);
-            if (raw) setSavedDailyCommute(JSON.parse(raw));
-          } catch {
-            // ignore
-          }
-        }}
-        onClearRoutePlan={() => {
-          setActiveRoutePlan(null);
-          setRouteOrigin(null);
-          setRouteDestination(null);
-        }}
-        initialOrigin={routeOrigin}
-        initialDestination={routeDestination}
-      />
+        {/* BANNER CẢNH BÁO OFFLINE (NẾU MẤT MẠNG - CHUẨN RULE 7) */}
+        {isOffline && (
+          <div
+            role="alert"
+            className="absolute top-28 inset-x-2.5 z-25 mx-auto max-w-xl px-3 py-2 rounded-2xl bg-amber-500 text-slate-950 font-bold text-[11px] shadow-xl flex items-center gap-2"
+          >
+            <WifiOff className="w-4 h-4 shrink-0" />
+            <span>
+              ⚠️ Mất kết nối mạng. Đang hiển thị dữ liệu lưu tạm gần nhất — vui lòng thận trọng quan sát thực tế.
+            </span>
+          </div>
+        )}
 
-      {/* 7. HỘP THOẠI BÁO NGẬP KIỂM SOÁT CHẶT 5 LỚP (O5) */}
-      <CrowdReportModal
-        isOpen={isReportModalOpen}
-        onClose={() => setIsReportModalOpen(false)}
-        deviceHash={deviceHash}
-        defaultHotspotId={selectedHotspot?.hotspot_id || null}
-        onReportAccepted={() => {
-          fetchAlertsData();
-          showToast(
-            '🎉 Đã ghi nhận báo cáo hiện trường! Dữ liệu điểm ngập đã được cập nhật lên bản đồ.'
-          );
-        }}
-      />
+        {/* TOAST PHẢN HỒI NHANH */}
+        {toastMessage && (
+          <div
+            role="status"
+            className="absolute top-28 inset-x-2.5 z-35 mx-auto max-w-md px-3.5 py-2 rounded-2xl bg-emerald-600 text-white font-extrabold text-xs shadow-2xl border border-emerald-300 flex items-center justify-between gap-2 animate-in fade-in duration-150"
+          >
+            <span>{toastMessage}</span>
+            <button
+              type="button"
+              onClick={() => setToastMessage(null)}
+              className="text-white/80 hover:text-white font-bold"
+            >
+              ✕
+            </button>
+          </div>
+        )}
 
-      {/* 8. MODAL ĐỒNG Ý QUYỀN VỊ TRÍ GPS & BẢO VỆ DỮ LIỆU CÁ NHÂN (TUÂN THỦ NGHỊ ĐỊNH 13/2023/NĐ-CP) */}
-      {showGpsConsentModal && (
-        <div
-          className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Thông báo bảo vệ dữ liệu vị trí cá nhân theo Nghị định 13/2023/NĐ-CP"
-        >
-          <div className="w-full max-w-md libre-glass rounded-3xl border border-slate-900/15 dark:border-white/20 shadow-2xl p-5 space-y-3.5">
-            <div className="flex items-start justify-between gap-2">
-              <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow">
-                  <MapPin className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-extrabold text-slate-900 dark:text-white leading-snug">
-                    Quyền Định vị GPS &amp; Bảo vệ Dữ liệu Cá nhân
-                  </h3>
-                  <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">
-                    Tuân thủ Nghị định 13/2023/NĐ-CP
-                  </span>
-                </div>
+        {/* 2. BẢN ĐỒ TƯƠNG TÁC MAPLIBRE GL JS TOÀN MÀN HÌNH (>86% VIEWPORT - L0) */}
+        <MapCanvas
+          features={features}
+          crowdReports={crowdReports}
+          cameras={cameras}
+          selectedDistrict={selectedDistrict}
+          vehicleType={vehicleType}
+          isDarkMode={isDarkMode}
+          selectedHotspot={selectedHotspot}
+          onSelectHotspot={(hs) => {
+            setSelectedCrowdReport(null);
+            setIsRouteDrawerOpen(false);
+            setSelectedHotspot(hs);
+          }}
+          onSelectCrowdReport={(rep) => {
+            setSelectedHotspot(null);
+            setIsRouteDrawerOpen(false);
+            setSelectedCrowdReport(rep);
+          }}
+          activeRoutePlan={activeRoutePlan}
+          routeOrigin={routeOrigin}
+          routeDestination={routeDestination}
+          userGpsLocation={userGpsLocation}
+          showLegend={showLegend}
+          onCloseLegend={() => setShowLegend(false)}
+        />
+
+        {/* 3. CÔNG TẮC NỔI CHUYỂN ĐỔI XE MÁY (>=20CM) VS Ô TÔ (>=25CM + PHÓNG CHỮ +12%) (O2) */}
+        <VehicleToggle
+          vehicleType={vehicleType}
+          onChangeVehicle={(type) => setVehicleType(type)}
+          onLocateUser={handleLocateUserClick}
+          showLegend={showLegend}
+          onToggleLegend={() => setShowLegend((prev) => !prev)}
+        />
+
+        {/* 4. CỤM ĐIỀU KHIỂN DƯỚI ĐÁY (VÙNG NGÓN CÁI THUMB ZONE CHUẨN MOBILE-FIRST) */}
+        <div className="absolute inset-x-0 bottom-0 z-20 pointer-events-none flex flex-col gap-1.5 px-2.5 pb-2">
+          <div className="mx-auto w-full flex items-end justify-between gap-1.5">
+            {/* Cụm bên trái: Thanh kích hoạt Tìm lộ trình tránh ngập & Nút 1 chạm Đi làm */}
+            <div className="pointer-events-auto flex flex-col gap-1 flex-1 min-w-0">
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={handleQuickSavedCommuteClick}
+                  title="Mở nhanh Lộ trình đi làm hằng ngày bằng 1 chạm (Lưu trên máy)"
+                  className="px-2.5 py-1.5 rounded-xl bg-amber-500/95 hover:bg-amber-400 text-slate-950 font-extrabold text-[11px] shadow-lg border border-amber-300 flex items-center gap-1 shrink-0 transition active:scale-95"
+                >
+                  <Bookmark className="w-3.5 h-3.5 shrink-0 fill-slate-950" />
+                  <span>🏠➔🏢 Đi làm (1 chạm)</span>
+                </button>
               </div>
+
               <button
                 type="button"
-                onClick={() => setShowGpsConsentModal(false)}
-                className="w-9 h-9 rounded-xl bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-300"
+                onClick={() => {
+                  setSelectedHotspot(null);
+                  setSelectedCrowdReport(null);
+                  setIsRouteDrawerOpen(true);
+                }}
+                className="wet-cta-target w-full px-3 py-2 rounded-2xl libre-glass border border-slate-900/15 dark:border-white/20 shadow-xl flex items-center gap-2 text-left hover:border-blue-500 transition group"
               >
-                <X className="w-4 h-4" />
+                <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow group-hover:scale-105 transition">
+                  <Search className="w-4 h-4" />
+                </div>
+                <div className="overflow-hidden min-w-0">
+                  <div className="text-xs font-extrabold text-slate-900 dark:text-white truncate">
+                    Tìm đường né ngập ({vehicleType === 'car' ? '🚗 Ô tô' : '🏍️ Xe máy'})
+                  </div>
+                  <div className="text-[10px] text-slate-600 dark:text-slate-300 truncate">
+                    {activeRoutePlan
+                      ? `+${activeRoutePlan.routes.recommended_safe_route.extra_time_min}p né ngập • Chạm để xem`
+                      : 'So sánh đường ngập vs đường an toàn'}
+                  </div>
+                </div>
               </button>
             </div>
 
-            <div className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 space-y-2 leading-relaxed">
-              <p>
-                <strong>Ocean Flood</strong> chỉ sử dụng tọa độ GPS của bạn cho 2 mục đích duy nhất:
-              </p>
-              <ul className="list-disc pl-5 space-y-1">
-                <li>
-                  Hiển thị điểm ngập xung quanh bạn và gợi ý lộ trình tránh ngập cho Xe máy / Ô tô.
-                </li>
-                <li>
-                  Kiểm tra bán kính hiện trường <strong>Geofence ≤ 500m</strong> khi bạn gửi báo cáo
-                  ngập cộng đồng (chống báo cáo giả từ xa).
-                </li>
-              </ul>
-              <p className="p-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-xs text-emerald-900 dark:text-emerald-200 font-medium">
-                🔒 <strong>Cam kết Quyền riêng tư:</strong> Tọa độ kiểm tra khoảng cách chỉ xử lý
-                tức thời trên bộ nhớ tạm (RAM), mã thiết bị được băm một chiều (
-                <code className="metric-mono">SHA-256</code>) và hệ thống{' '}
-                <strong>tuyệt đối không lưu lịch sử di chuyển cá nhân</strong>.
-              </p>
-            </div>
+            {/* Cụm bên phải: Nút FAB Khẩn cấp "📸 Báo ngập" (>= 56px chuẩn tay ướt) */}
+            <button
+              type="button"
+              onClick={() => setIsReportModalOpen(true)}
+              className="pointer-events-auto wet-cta-target px-3.5 py-3 rounded-2xl bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 active:scale-95 text-white font-extrabold text-xs shadow-2xl shadow-red-600/40 border-2 border-white/85 flex flex-col items-center justify-center gap-0.5 shrink-0 transition"
+            >
+              <Camera className="w-5 h-5 shrink-0" />
+              <span>📸 Báo ngập</span>
+            </button>
+          </div>
 
-            <div className="grid grid-cols-2 gap-2.5 pt-1">
-              <button
-                type="button"
-                onClick={() => setShowGpsConsentModal(false)}
-                className="wet-touch-target px-4 py-2.5 rounded-2xl bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold text-xs sm:text-sm"
-              >
-                Chỉ xem bản đồ
-              </button>
-              <button
-                type="button"
-                onClick={handleAcceptGpsConsent}
-                className="wet-touch-target px-4 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs sm:text-sm shadow-lg"
-              >
-                Đồng ý &amp; Bật GPS
-              </button>
+          {/* Footer Disclaimer Pháp lý & Bảo vệ dữ liệu vị trí (Tuân thủ Rule 7 & NĐ 13/2023/NĐ-CP) */}
+          <footer className="pointer-events-auto mx-auto w-full libre-glass rounded-xl px-2 py-1 border border-slate-900/10 dark:border-white/10 text-[9.5px] text-slate-600 dark:text-slate-400 flex items-center justify-between gap-1.5">
+            <span className="flex items-center gap-1 truncate">
+              <AlertCircle className="w-3 h-3 text-amber-500 shrink-0" />
+              <span className="truncate">
+                Dự báo 1–3h &amp; lộ trình mang tính tham khảo hỗ trợ quyết định.
+              </span>
+            </span>
+            <button
+              type="button"
+              onClick={() => setShowGpsConsentModal(true)}
+              className="font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-0.5 shrink-0"
+            >
+              <ShieldCheck className="w-3 h-3" />
+              <span>NĐ13/GPS</span>
+            </button>
+          </footer>
+        </div>
+
+        {/* 5. THẺ CHI TIẾT ĐIỂM NGẬP NGÔN NGỮ KÉP (O3) */}
+        <AlertBottomSheet
+          selectedHotspot={selectedHotspot}
+          selectedCrowdReport={selectedCrowdReport}
+          vehicleType={vehicleType}
+          deviceHash={deviceHash}
+          onClose={() => {
+            setSelectedHotspot(null);
+            setSelectedCrowdReport(null);
+          }}
+          onRefreshAlerts={fetchAlertsData}
+          onOpenRouteToAvoid={handleOpenRouteToAvoidHotspot}
+        />
+
+        {/* 6. NGĂN TÌM LỘ TRÌNH TRÁNH NGẬP CHO XE MÁY & Ô TÔ (O4) */}
+        <RoutePlannerDrawer
+          isOpen={isRouteDrawerOpen}
+          onClose={() => setIsRouteDrawerOpen(false)}
+          vehicleType={vehicleType}
+          onChangeVehicle={(type) => setVehicleType(type)}
+          scenario={scenario}
+          selectedDistrict={selectedDistrict}
+          onSelectDistrict={(dist) => setSelectedDistrict(dist)}
+          activeRoutePlan={activeRoutePlan}
+          onRoutePlanComputed={(plan, orig, dest) => {
+            setActiveRoutePlan(plan);
+            setRouteOrigin(orig);
+            setRouteDestination(dest);
+            try {
+              const raw = localStorage.getItem(SAVED_COMMUTE_STORAGE_KEY);
+              if (raw) setSavedDailyCommute(JSON.parse(raw));
+            } catch {
+              // ignore
+            }
+          }}
+          onClearRoutePlan={() => {
+            setActiveRoutePlan(null);
+            setRouteOrigin(null);
+            setRouteDestination(null);
+          }}
+          initialOrigin={routeOrigin}
+          initialDestination={routeDestination}
+        />
+
+        {/* 7. HỘP THOẠI BÁO NGẬP KIỂM SOÁT CHẶT 5 LỚP (O5) */}
+        <CrowdReportModal
+          isOpen={isReportModalOpen}
+          onClose={() => setIsReportModalOpen(false)}
+          deviceHash={deviceHash}
+          defaultHotspotId={selectedHotspot?.hotspot_id || null}
+          onReportAccepted={() => {
+            fetchAlertsData();
+            showToast(
+              '🎉 Đã ghi nhận báo cáo hiện trường! Dữ liệu điểm ngập đã được cập nhật lên bản đồ.'
+            );
+          }}
+        />
+
+        {/* 8. MODAL ĐỒNG Ý QUYỀN VỊ TRÍ GPS & BẢO VỆ DỮ LIỆU CÁ NHÂN (TUÂN THỦ NGHỊ ĐỊNH 13/2023/NĐ-CP) */}
+        {showGpsConsentModal && (
+          <div
+            className="absolute inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-3"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Thông báo bảo vệ dữ liệu vị trí cá nhân theo Nghị định 13/2023/NĐ-CP"
+          >
+            <div className="w-full max-w-md libre-glass rounded-3xl border border-slate-900/15 dark:border-white/20 shadow-2xl p-4 space-y-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-9 h-9 rounded-2xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow">
+                    <MapPin className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-extrabold text-slate-900 dark:text-white leading-snug">
+                      Quyền Định vị GPS &amp; Bảo vệ Dữ liệu Cá nhân
+                    </h3>
+                    <span className="text-[11px] font-semibold text-blue-600 dark:text-blue-400">
+                      Tuân thủ Nghị định 13/2023/NĐ-CP
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowGpsConsentModal(false)}
+                  className="w-8 h-8 rounded-xl bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-300"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="text-xs text-slate-700 dark:text-slate-300 space-y-2 leading-relaxed">
+                <p>
+                  <strong>Ocean Flood</strong> chỉ sử dụng tọa độ GPS của bạn cho 2 mục đích duy nhất:
+                </p>
+                <ul className="list-disc pl-4 space-y-1">
+                  <li>
+                    Hiển thị điểm ngập xung quanh bạn và gợi ý lộ trình tránh ngập cho Xe máy / Ô tô.
+                  </li>
+                  <li>
+                    Kiểm tra bán kính hiện trường <strong>Geofence ≤ 500m</strong> khi bạn gửi báo cáo
+                    ngập cộng đồng (chống báo cáo giả từ xa).
+                  </li>
+                </ul>
+                <p className="p-2 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-[11px] text-emerald-900 dark:text-emerald-200 font-medium">
+                  🔒 <strong>Cam kết Quyền riêng tư:</strong> Tọa độ kiểm tra khoảng cách chỉ xử lý
+                  tức thời trên bộ nhớ tạm (RAM), mã thiết bị được băm một chiều (
+                  <code className="metric-mono">SHA-256</code>) và hệ thống{' '}
+                  <strong>tuyệt đối không lưu lịch sử di chuyển cá nhân</strong>.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowGpsConsentModal(false)}
+                  className="wet-touch-target px-3 py-2 rounded-2xl bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold text-xs"
+                >
+                  Chỉ xem bản đồ
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAcceptGpsConsent}
+                  className="wet-touch-target px-3 py-2 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs shadow-lg"
+                >
+                  Đồng ý &amp; Bật GPS
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
-    </main>
+        )}
+      </main>
+    </div>
   );
 }

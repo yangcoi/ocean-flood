@@ -274,7 +274,7 @@ export default function AlertBottomSheet({
   return (
     <section
       aria-label="Chi tiết Cảnh báo Ngập Ngôn ngữ Kép"
-      className="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-2xl libre-glass rounded-t-sheet border-t border-x border-slate-900/15 dark:border-white/20 shadow-2xl transition-all duration-200 max-h-[84dvh] flex flex-col"
+      className="absolute inset-x-0 bottom-0 z-30 w-full libre-glass rounded-t-sheet border-t border-slate-900/15 dark:border-white/20 shadow-2xl transition-all duration-200 max-h-[82%] flex flex-col"
       style={{
         fontSize: isCarMode ? '112%' : '100%',
       }}

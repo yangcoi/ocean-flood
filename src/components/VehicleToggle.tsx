@@ -21,7 +21,7 @@ export default function VehicleToggle({
 }: VehicleToggleProps) {
   return (
     <aside
-      className="fixed right-3 bottom-24 z-20 flex flex-col items-end gap-2.5 pointer-events-none"
+      className="absolute right-2.5 bottom-28 z-20 flex flex-col items-end gap-2 pointer-events-none"
       aria-label="Công tắc chuyển phương tiện và điều khiển bản đồ"
     >
       {/* Công tắc Kép Xe máy (>=20cm) vs Ô tô (>=25cm + Phóng chữ +12%) */}

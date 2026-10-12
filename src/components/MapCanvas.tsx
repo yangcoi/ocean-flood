@@ -42,16 +42,24 @@ export interface MapCanvasProps {
  * Sử dụng Carto Light / Dark Matter giảm bão hòa màu để làm nổi bật 100% lớp ngập CVD-safe
  */
 function createBasemapStyle(isDark: boolean): maplibregl.StyleSpecification {
-  const tileUrl = isDark
-    ? 'https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'
-    : 'https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png';
+  const tiles = isDark
+    ? [
+        'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png',
+        'https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png',
+        'https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png',
+      ]
+    : [
+        'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
+        'https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
+        'https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
+      ];
 
   return {
     version: 8,
     sources: {
       'carto-basemap': {
         type: 'raster',
-        tiles: [tileUrl],
+        tiles,
         tileSize: 256,
         attribution:
           '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
@@ -62,7 +70,7 @@ function createBasemapStyle(isDark: boolean): maplibregl.StyleSpecification {
         id: 'basemap-background',
         type: 'background',
         paint: {
-          'background-color': isDark ? '#0B0F19' : '#F1F5F9',
+          'background-color': isDark ? '#0B0F19' : '#E2E8F0',
         },
       },
       {
@@ -70,9 +78,9 @@ function createBasemapStyle(isDark: boolean): maplibregl.StyleSpecification {
         type: 'raster',
         source: 'carto-basemap',
         paint: {
-          'raster-opacity': isDark ? 0.88 : 0.92,
-          'raster-Contrast': 0.08,
-        } as maplibregl.RasterLayerSpecification['paint'],
+          'raster-opacity': isDark ? 0.92 : 0.96,
+          'raster-contrast': 0.05,
+        },
       },
     ],
   };
@@ -525,24 +533,37 @@ export default function MapCanvas({
       });
     });
 
+    const resizeObserver = new ResizeObserver(() => {
+      map.resize();
+    });
+    resizeObserver.observe(mapContainerRef.current);
+
     mapRef.current = map;
 
     return () => {
+      resizeObserver.disconnect();
       map.remove();
       mapRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Đổi giao diện Sáng / Tối của Basemap
+  const prevDarkModeRef = useRef<boolean>(isDarkMode);
+  const syncLayersRef = useRef(syncMapSourcesAndLayers);
+  syncLayersRef.current = syncMapSourcesAndLayers;
+
+  // Đổi giao diện Sáng / Tối của Basemap CHỈ khi isDarkMode thực sự thay đổi
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !isMapLoaded) return;
+    if (prevDarkModeRef.current === isDarkMode) return;
+    prevDarkModeRef.current = isDarkMode;
+
     map.setStyle(createBasemapStyle(isDarkMode));
     map.once('styledata', () => {
-      syncMapSourcesAndLayers(map);
+      syncLayersRef.current(map);
     });
-  }, [isDarkMode, isMapLoaded, syncMapSourcesAndLayers]);
+  }, [isDarkMode, isMapLoaded]);
 
   // Đồng bộ dữ liệu các lớp GeoJSON khi features, lộ trình hoặc phương tiện thay đổi
   useEffect(() => {
@@ -754,7 +775,7 @@ export default function MapCanvas({
   ]);
 
   return (
-    <div className="relative w-screen h-dvh overflow-hidden">
+    <div className="relative w-full h-full overflow-hidden">
       {/* Bản đồ toàn màn hình (>86% Viewport) */}
       <div
         ref={mapContainerRef}
@@ -767,7 +788,7 @@ export default function MapCanvas({
         <div
           role="dialog"
           aria-label="Thông tin Camera Giao thông TTGT TP.HCM"
-          className="fixed left-3 right-3 sm:left-auto sm:right-20 bottom-24 sm:w-96 z-30 libre-glass rounded-2xl border border-cyan-500/50 shadow-2xl p-3.5 space-y-2 animate-in fade-in duration-150"
+          className="absolute inset-x-2.5 bottom-28 z-30 libre-glass rounded-2xl border border-cyan-500/50 shadow-2xl p-3 space-y-2 animate-in fade-in duration-150"
         >
           <div className="flex items-start justify-between gap-2">
             <div className="flex items-center gap-2">
@@ -820,7 +841,7 @@ export default function MapCanvas({
         <div
           role="region"
           aria-label="Chú giải ký hiệu bản đồ ngập CVD-Safe"
-          className="fixed left-3 bottom-24 z-25 w-80 sm:w-96 libre-glass rounded-2xl border border-slate-900/15 dark:border-white/20 shadow-2xl p-3.5 text-xs space-y-2.5 animate-in fade-in duration-150"
+          className="absolute inset-x-2.5 bottom-28 z-25 libre-glass rounded-2xl border border-slate-900/15 dark:border-white/20 shadow-2xl p-3 text-xs space-y-2 animate-in fade-in duration-150"
         >
           <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-1.5">
             <span className="font-extrabold text-slate-900 dark:text-white text-sm">

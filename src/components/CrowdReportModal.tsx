@@ -312,12 +312,12 @@ export default function CrowdReportModal({
 
   return (
     <div
-      className="fixed inset-0 z-40 bg-slate-950/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4"
+      className="absolute inset-0 z-40 bg-slate-950/75 backdrop-blur-sm flex items-end justify-center p-0"
       role="dialog"
       aria-modal="true"
       aria-label="Hộp thoại Báo ngập hiện trường kiểm soát 5 lớp"
     >
-      <div className="w-full max-w-xl libre-glass rounded-t-sheet sm:rounded-3xl border border-slate-900/15 dark:border-white/20 shadow-2xl max-h-[92dvh] flex flex-col overflow-hidden">
+      <div className="w-full max-w-xl libre-glass rounded-t-sheet border border-slate-900/15 dark:border-white/20 shadow-2xl max-h-[92%] flex flex-col overflow-hidden">
         {/* Header */}
         <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-gradient-to-r from-orange-600/15 to-red-600/15 shrink-0">
           <div className="flex items-center gap-2.5">

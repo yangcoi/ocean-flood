@@ -305,7 +305,7 @@ export default function RoutePlannerDrawer({
   return (
     <section
       aria-label="Ngăn tìm lộ trình tránh ngập cho Xe máy và Ô tô"
-      className="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-2xl libre-glass rounded-t-sheet border-t border-x border-slate-900/15 dark:border-white/20 shadow-2xl max-h-[86dvh] flex flex-col"
+      className="absolute inset-x-0 bottom-0 z-30 mx-auto max-w-2xl libre-glass rounded-t-sheet border-t border-x border-slate-900/15 dark:border-white/20 shadow-2xl max-h-[86%] flex flex-col"
       style={{
         fontSize: isCarMode ? '112%' : '100%',
       }}
