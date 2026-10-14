@@ -26,7 +26,11 @@ import SecurityCameraModal, {
   type ActiveCameraTarget,
 } from '@/components/SecurityCameraModal';
 
-import type { HcmMvpDistrict, TrafficCameraSeed } from '@/data/hcm-spatial-seed';
+import {
+  calculateDistanceMeters,
+  type HcmMvpDistrict,
+  type TrafficCameraSeed,
+} from '@/data/hcm-spatial-seed';
 import type {
   ForecastScenario,
   AlertGeoJsonFeature,
@@ -258,6 +262,60 @@ export default function OceanFloodHomePage() {
   const handleOpenRouteToAvoidHotspot = (hotspot: HotspotForecastProperties) => {
     setSelectedHotspot(null);
     setSelectedCrowdReport(null);
+
+    const roadCoords = hotspot.road_geom?.coordinates || [];
+    const streetBase = hotspot.street_name.split('(')[0].trim();
+
+    if (roadCoords.length >= 2) {
+      const pStart = roadCoords[0];
+      const pNext = roadCoords[1];
+      const pLast = roadCoords[roadCoords.length - 1];
+      const pPrev = roadCoords[roadCoords.length - 2];
+
+      // Tính vector hướng tiếp cận trước điểm ngập ~350m
+      const deltaStartLng = pStart[0] - pNext[0];
+      const deltaStartLat = pStart[1] - pNext[1];
+      const magStart = Math.sqrt(deltaStartLng * deltaStartLng + deltaStartLat * deltaStartLat) || 0.001;
+      const stepStart = 0.0035; // ~380m
+      const originLng = Number((pStart[0] + (deltaStartLng / magStart) * stepStart).toFixed(6));
+      const originLat = Number((pStart[1] + (deltaStartLat / magStart) * stepStart).toFixed(6));
+
+      // Tính vector hướng thoát sau điểm ngập ~350m
+      const deltaEndLng = pLast[0] - pPrev[0];
+      const deltaEndLat = pLast[1] - pPrev[1];
+      const magEnd = Math.sqrt(deltaEndLng * deltaEndLng + deltaEndLat * deltaEndLat) || 0.001;
+      const stepEnd = 0.0035; // ~380m
+      const destLng = Number((pLast[0] + (deltaEndLng / magEnd) * stepEnd).toFixed(6));
+      const destLat = Number((pLast[1] + (deltaEndLat / magEnd) * stepEnd).toFixed(6));
+
+      // Nếu người dùng đã bật GPS và đang ở gần (< 4km), dùng vị trí GPS làm điểm xuất phát
+      const useGpsOrigin =
+        userGpsLocation &&
+        calculateDistanceMeters(userGpsLocation[0], userGpsLocation[1], pStart[0], pStart[1]) <= 4000;
+
+      const dynamicOrigin: RouteWaypointInput = useGpsOrigin
+        ? {
+            lng: userGpsLocation![0],
+            lat: userGpsLocation![1],
+            label: 'Vị trí GPS của bạn',
+          }
+        : {
+            lng: originLng,
+            lat: originLat,
+            label: `Hướng tiếp cận ${streetBase}`,
+          };
+
+      const dynamicDest: RouteWaypointInput = {
+        lng: destLng,
+        lat: destLat,
+        label: `Hướng thoát qua ${streetBase}`,
+      };
+
+      setRouteOrigin(dynamicOrigin);
+      setRouteDestination(dynamicDest);
+      setIsRouteDrawerOpen(true);
+      return;
+    }
 
     const matchingPreset =
       POPULAR_HCM_COMMUTE_PRESETS.find((p) => p.district === hotspot.district) ||
