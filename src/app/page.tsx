@@ -341,7 +341,7 @@ export default function OceanFloodHomePage() {
                 </span>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=10&data=https://tape-dress-draws-closer.trycloudflare.com"
+                  src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=10&data=https://accommodation-dakota-telephone-inspiration.trycloudflare.com"
                   alt="QR HTTPS Mobile"
                   className="w-36 h-36 rounded-xl bg-white p-1"
                 />
@@ -353,7 +353,7 @@ export default function OceanFloodHomePage() {
                 </span>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=10&data=http://192.168.2.209:3000"
+                  src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=10&data=http://10.229.53.23:3000"
                   alt="QR LAN Wi-Fi"
                   className="w-36 h-36 rounded-xl bg-white p-1"
                 />
