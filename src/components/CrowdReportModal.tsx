@@ -416,8 +416,8 @@ export default function CrowdReportModal({
                 <span className="text-emerald-400">• GPS chuẩn</span>
               </div>
 
-              {/* Nút bấm chụp ảnh lớn */}
-              <div className="absolute bottom-2.5 inset-x-2.5 flex items-center gap-2">
+              {/* Nút bấm chụp ảnh bằng Camera trực tiếp (Cấm upload thư viện) */}
+              <div className="absolute bottom-2.5 inset-x-2.5 flex items-center">
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -429,21 +429,17 @@ export default function CrowdReportModal({
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="flex-1 py-2 px-3 rounded-xl bg-white/95 hover:bg-white text-slate-900 font-extrabold text-xs shadow-lg flex items-center justify-center gap-1.5 transition active:scale-[0.98]"
+                  className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-black text-xs shadow-xl flex items-center justify-center gap-2 transition active:scale-[0.98]"
                 >
-                  <Camera className="w-4 h-4 text-orange-600" />
-                  <span>{isPhotoUploaded ? 'Chụp lại ảnh khác' : 'Chụp ảnh bằng Camera'}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="py-2 px-3 rounded-xl bg-slate-900/80 hover:bg-slate-900 text-white font-bold text-xs backdrop-blur-md shadow-lg flex items-center gap-1"
-                >
-                  <Upload className="w-3.5 h-3.5" />
-                  <span>Tải ảnh</span>
+                  <Camera className="w-4 h-4" />
+                  <span>{isPhotoUploaded ? '📸 Chụp lại ảnh khác bằng Camera' : '📸 Bấm Chụp Ảnh Bằng Camera Ngay'}</span>
                 </button>
               </div>
             </div>
+
+            <p className="text-[10.5px] text-slate-500 dark:text-slate-400 font-medium">
+              🔒 <strong>Quy định xác thực:</strong> Chỉ cho phép chụp trực tiếp từ Camera điện thoại tại hiện trường, không cho phép tải ảnh từ thư viện để đảm bảo độ tin cậy.
+            </p>
           </div>
 
           {/* BƯỚC 2: CHỌN MỨC NGẬP THỰC TẾ (4 NÚT TO RÕ DỄ CHẠM) */}

@@ -788,6 +788,73 @@ export default function AlertBottomSheet({
       </div>
 
       {/* =====================================================================
+          CẤP 1.5: KHỐI DỰ KIẾN NGẬP • KHUNG GIỜ • KHẢ NĂNG % • MƯA (HIỂN THỊ NỔI BẬT)
+         ===================================================================== */}
+      <div className="p-3.5 rounded-2xl bg-gradient-to-br from-blue-50/80 to-indigo-50/80 dark:from-slate-800/90 dark:to-slate-850 border border-blue-200 dark:border-blue-900/60 shadow-sm space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <Calendar className="w-4 h-4 text-[#1A73E8]" />
+            <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider">
+              Dự Báo Diễn Biến Ngập &amp; Khung Giờ
+            </span>
+          </div>
+          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-blue-600 text-white shadow-sm">
+            Khả năng: {hotspot.flood_probability_pct}%
+          </span>
+        </div>
+
+        {/* 4 THÔNG SỐ VÀNG: KHUNG GIỜ, MƯA, TRIỀU SÔNG, ĐỘ SÂU DỰ KIẾN */}
+        <div className="grid grid-cols-2 gap-2 text-xs">
+          <div className="p-2.5 rounded-xl bg-white/95 dark:bg-slate-900/95 border border-slate-200/80 dark:border-slate-700/80 space-y-0.5">
+            <div className="text-[10px] text-slate-500 font-bold flex items-center gap-1">
+              <Clock className="w-3.5 h-3.5 text-[#1A73E8]" />
+              <span>Khung giờ cao điểm:</span>
+            </div>
+            <div className="text-xs font-black text-slate-900 dark:text-white">
+              {hotspot.typical_timeline || '17:00 – 19:00'}
+            </div>
+          </div>
+
+          <div className="p-2.5 rounded-xl bg-white/95 dark:bg-slate-900/95 border border-slate-200/80 dark:border-slate-700/80 space-y-0.5">
+            <div className="text-[10px] text-slate-500 font-bold flex items-center gap-1">
+              <CloudRain className="w-3.5 h-3.5 text-[#1A73E8]" />
+              <span>Dự kiến mưa:</span>
+            </div>
+            <div className="text-xs font-black text-slate-900 dark:text-white font-mono">
+              {hotspot.rain_forecast_1_3h_mm_h || hotspot.rain_current_mm_h} mm/h
+            </div>
+          </div>
+
+          <div className="p-2.5 rounded-xl bg-white/95 dark:bg-slate-900/95 border border-slate-200/80 dark:border-slate-700/80 space-y-0.5">
+            <div className="text-[10px] text-slate-500 font-bold flex items-center gap-1">
+              <Waves className="w-3.5 h-3.5 text-indigo-600" />
+              <span>Triều sông Sài Gòn:</span>
+            </div>
+            <div className="text-xs font-black text-slate-900 dark:text-white font-mono">
+              {hotspot.tide_peak_m}m ({hotspot.tide_peak_m >= 1.6 ? 'Báo động III' : 'Báo động II'})
+            </div>
+          </div>
+
+          <div className="p-2.5 rounded-xl bg-white/95 dark:bg-slate-900/95 border border-slate-200/80 dark:border-slate-700/80 space-y-0.5">
+            <div className="text-[10px] text-slate-500 font-bold flex items-center gap-1">
+              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+              <span>Độ sâu dự kiến:</span>
+            </div>
+            <div className="text-xs font-black text-red-600 dark:text-red-400">
+              ~{hotspot.estimated_depth_cm} cm
+            </div>
+          </div>
+        </div>
+
+        {/* TIMELINE 3 GIỜ TỚI KHOA HỌC + ĐỜI THƯỜNG */}
+        <Hydrological3HourTimelineBlock
+          hotspot={hotspot}
+          districtRainfall={districtRainfall}
+          tidePhuAn={tidePhuAn}
+        />
+      </div>
+
+      {/* =====================================================================
           CẤP 2: HAI NÚT HÀNH ĐỘNG CHÍNH (CHỈ ĐƯỜNG NÉ ĐIỂM NÀY & XEM TRỤ CAM TTGT)
          ===================================================================== */}
       <div className="grid grid-cols-2 gap-2.5">
@@ -888,12 +955,6 @@ export default function AlertBottomSheet({
 
         {activeTab === 'overview' ? (
           <div className="space-y-3">
-            {/* TRỌNG TÂM 1: DỰ BÁO DIỄN BIẾN THỦY VĂN 3 GIỜ TỚI */}
-            <Hydrological3HourTimelineBlock
-              hotspot={hotspot}
-              districtRainfall={districtRainfall}
-              tidePhuAn={tidePhuAn}
-            />
 
             {/* GỢI Ý ĐƯỜNG VÒNG NÉ ĐIỂM NÀY */}
             <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700 space-y-1.5">
