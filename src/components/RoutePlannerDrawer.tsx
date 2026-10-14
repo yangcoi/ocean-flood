@@ -20,6 +20,7 @@ import {
   FastForward,
   ListOrdered,
   MapPin,
+  ExternalLink,
 } from 'lucide-react';
 import type { HcmMvpDistrict } from '@/data/hcm-spatial-seed';
 import type { ForecastScenario } from '@/lib/forecast-engine';
@@ -885,6 +886,21 @@ export default function RoutePlannerDrawer({
                 <span>{savedSuccess ? 'Đã lưu!' : 'Lưu'}</span>
               </button>
             </div>
+
+            {/* Nút mở trực tiếp lộ trình né ngập trên ứng dụng Google Maps chính chủ */}
+            <a
+              href={`https://www.google.com/maps/dir/?api=1&origin=${origin.lat},${origin.lng}&destination=${destination.lat},${destination.lng}${
+                avoidedList[0]?.coordinates
+                  ? `&waypoints=${avoidedList[0].coordinates[1]},${avoidedList[0].coordinates[0]}`
+                  : ''
+              }&travelmode=${vehicleType === 'motorcycle' ? 'two-wheeler' : 'driving'}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full py-2.5 px-3 rounded-full bg-blue-50 dark:bg-blue-950/70 hover:bg-blue-100 dark:hover:bg-blue-900/80 text-[#1A73E8] dark:text-blue-300 font-extrabold text-xs flex items-center justify-center gap-1.5 border border-blue-200 dark:border-blue-800 transition"
+            >
+              <ExternalLink className="w-3.5 h-3.5 shrink-0" />
+              <span>Mở dẫn đường bằng app Google Maps chính chủ ↗</span>
+            </a>
           </>
         )}
       </div>

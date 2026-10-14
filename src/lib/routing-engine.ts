@@ -282,7 +282,159 @@ export async function fetchOsrmRouteCandidates(
 }
 
 /**
- * Xây dựng lộ trình nội bộ khi OSRM hoàn toàn mất kết nối (Offline)
+ * Giải mã chuỗi Google Encoded Polyline sang danh sách tọa độ GeoJSON [lng, lat][]
+ */
+export function decodeGooglePolyline(encoded: string): [number, number][] {
+  const points: [number, number][] = [];
+  let index = 0;
+  const len = encoded.length;
+  let lat = 0;
+  let lng = 0;
+
+  while (index < len) {
+    let b: number;
+    let shift = 0;
+    let result = 0;
+    do {
+      b = encoded.charCodeAt(index++) - 63;
+      result |= (b & 0x1f) << shift;
+      shift += 5;
+    } while (b >= 0x20);
+    const dlat = (result & 1) !== 0 ? ~(result >> 1) : result >> 1;
+    lat += dlat;
+
+    shift = 0;
+    result = 0;
+    do {
+      b = encoded.charCodeAt(index++) - 63;
+      result |= (b & 0x1f) << shift;
+      shift += 5;
+    } while (b >= 0x20);
+    const dlng = (result & 1) !== 0 ? ~(result >> 1) : result >> 1;
+    lng += dlng;
+
+    points.push([
+      Number((lng / 1e5).toFixed(6)),
+      Number((lat / 1e5).toFixed(6)),
+    ]);
+  }
+  return points;
+}
+
+/**
+ * Gọi Google Routes API chính thức từ Google Cloud nếu hệ thống được cấu hình GOOGLE_MAPS_API_KEY
+ * Mang lại độ chuẩn xác 100% nguyên bản của Google Maps (đúng luật, đúng phân làn, có traffic kẹt xe thời gian thực).
+ */
+export async function fetchGoogleRoutesCandidates(
+  waypoints: [number, number][],
+  vehicleType: VehicleType = 'motorcycle'
+): Promise<OsrmCandidateRoute[] | null> {
+  const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+  if (!apiKey || waypoints.length < 2) return null;
+
+  const origin = waypoints[0];
+  const dest = waypoints[waypoints.length - 1];
+  const intermediates = waypoints.slice(1, waypoints.length - 1);
+
+  const url = 'https://routes.googleapis.com/directions/v2:computeRoutes';
+
+  const body = {
+    origin: {
+      location: {
+        latLng: { latitude: origin[1], longitude: origin[0] },
+      },
+    },
+    destination: {
+      location: {
+        latLng: { latitude: dest[1], longitude: dest[0] },
+      },
+    },
+    intermediates: intermediates.map((pt) => ({
+      location: {
+        latLng: { latitude: pt[1], longitude: pt[0] },
+      },
+    })),
+    travelMode: vehicleType === 'motorcycle' ? 'TWO_WHEELER' : 'DRIVE',
+    routingPreference: 'TRAFFIC_AWARE',
+    computeAlternativeRoutes: true,
+  };
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 6000);
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': apiKey,
+        'X-Goog-FieldMask':
+          'routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline',
+      },
+      body: JSON.stringify(body),
+    });
+    clearTimeout(timeoutId);
+
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!data?.routes || !Array.isArray(data.routes) || data.routes.length === 0) {
+      return null;
+    }
+
+    const candidates: OsrmCandidateRoute[] = [];
+    for (const r of data.routes) {
+      const encoded = r?.polyline?.encodedPolyline;
+      if (typeof encoded === 'string' && encoded.length > 0) {
+        const coords = decodeGooglePolyline(encoded);
+        if (coords.length >= 2) {
+          const rawDuration = r.duration ? parseInt(r.duration, 10) : 300;
+          candidates.push({
+            geometry: {
+              type: 'LineString',
+              coordinates: coords,
+            },
+            distance_km: Number(((r.distanceMeters || 1000) / 1000).toFixed(2)),
+            duration_min: Math.max(3, Math.round(rawDuration / 60)),
+          });
+        }
+      }
+    }
+
+    return candidates.length > 0 ? candidates : null;
+  } catch {
+    clearTimeout(timeoutId);
+    return null;
+  }
+}
+
+/**
+ * Động cơ tìm đường tổng hợp thông minh (Hybrid Engine):
+ * 1. Nếu có GOOGLE_MAPS_API_KEY -> Ưu tiên 100% dữ liệu từ Google Routes API.
+ * 2. Mặc định -> Dùng OSRM (OpenStreetMap) đã được tối ưu tim đường và chống báo động giả.
+ */
+export async function fetchOptimalRouteCandidates(
+  waypoints: [number, number][],
+  vehicleType: VehicleType = 'motorcycle',
+  alternatives: boolean | number = true
+): Promise<{ candidates: OsrmCandidateRoute[]; source: 'google' | 'osrm' } | null> {
+  // 1. Thử gọi Google Maps Routes API trước
+  const googleCandidates = await fetchGoogleRoutesCandidates(waypoints, vehicleType);
+  if (googleCandidates && googleCandidates.length > 0) {
+    return { candidates: googleCandidates, source: 'google' };
+  }
+
+  // 2. Fallback sang OSRM engine
+  const osrmCandidates = await fetchOsrmRouteCandidates(waypoints, alternatives);
+  if (osrmCandidates && osrmCandidates.length > 0) {
+    return { candidates: osrmCandidates, source: 'osrm' };
+  }
+
+  return null;
+}
+
+/**
+ * Xây dựng lộ trình nội bộ khi hoàn toàn mất kết nối mạng (Offline Fallback)
  */
 function buildFallbackLineString(
   origin: [number, number],
@@ -351,8 +503,17 @@ export async function computeFloodAwareRoutePlan(
         f.properties.verification_status === 'VERIFIED')
   );
 
-  // 1. Lấy các ứng viên lộ trình thực tế từ OSRM
-  const directCandidates = await fetchOsrmRouteCandidates([originCoord, destCoord], true);
+  // 1. Lấy các ứng viên lộ trình thực tế (Ưu tiên Google Routes API nếu có GOOGLE_MAPS_API_KEY, mặc định OSRM)
+  const routeResult = await fetchOptimalRouteCandidates(
+    [originCoord, destCoord],
+    vehicleType,
+    true
+  );
+  const directCandidates = routeResult?.candidates || null;
+  const routingProvider =
+    routeResult?.source === 'google'
+      ? 'Dữ liệu giao thông Google Maps (Routes API)'
+      : 'Đồ thị đường bộ OpenStreetMap/OSRM';
 
   let directGeom: GeoJsonLineString;
   let directDistanceKm: number;
@@ -495,9 +656,13 @@ export async function computeFloodAwareRoutePlan(
 
     for (const anchor of anchorPoints) {
       if (!anchor) continue;
-      const detourOsrm = await fetchOsrmRouteCandidates([originCoord, anchor, destCoord], 1);
-      if (detourOsrm && detourOsrm.length > 0) {
-        const candidateDetour = detourOsrm[0];
+      const detourResult = await fetchOptimalRouteCandidates(
+        [originCoord, anchor, destCoord],
+        vehicleType,
+        false
+      );
+      if (detourResult && detourResult.candidates.length > 0) {
+        const candidateDetour = detourResult.candidates[0];
         const hitsPrimary = checkRouteIntersectsHotspot(
           candidateDetour.geometry,
           primaryHazard,
@@ -572,9 +737,9 @@ export async function computeFloodAwareRoutePlan(
     vehicle_threshold_cm: depthThresholdCm,
     flood_detected_on_direct_route: true,
     extreme_isolation_warning: isIsolatedPeninsula,
-    confidence_note: `Định tuyến tự động theo mạng lưới đường bộ OpenStreetMap (OSRM). Tuyến đường thay thế đã được kiểm chứng tránh vùng ngập, tuân thủ hướng đường một chiều và phân luồng xe.`,
+    confidence_note: `Định tuyến tự động theo ${routingProvider}. Tuyến đường thay thế đã được kiểm chứng tránh vùng ngập, tuân thủ hướng đường một chiều và phân luồng xe.`,
     updated_at: conditions.updated_at,
-    source_attribution: `${conditions.weather_source_label} + Đồ thị đường bộ OpenStreetMap/OSRM`,
+    source_attribution: `${conditions.weather_source_label} + ${routingProvider}`,
     intersected_alerts: intersectedAlerts,
     routes: {
       direct_flooded_route: directFloodedRoute,
