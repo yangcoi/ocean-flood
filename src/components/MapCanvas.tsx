@@ -78,10 +78,8 @@ export default function MapCanvas({
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [currentZoom, setCurrentZoom] = useState<number>(11.8);
 
-  // Xây dựng GeoJSON cho các đoạn đường ngập
+  // Xây dựng GeoJSON cho các đoạn đường ngập (CHỈ DÙNG LineString CỦA TUYẾN ĐƯỜNG, TUYỆT ĐỐI KHÔNG OVERLAY HÌNH HỘP TO)
   const buildSpatialLayersData = useCallback(() => {
-    const verifiedPolygons: GeoJSON.Feature[] = [];
-    const forecastPolygons: GeoJSON.Feature[] = [];
     const verifiedLines: GeoJSON.Feature[] = [];
     const forecastLines: GeoJSON.Feature[] = [];
 
@@ -93,18 +91,6 @@ export default function MapCanvas({
       else if (p.severity_level === 1) colorHex = '#D97706';
 
       const isVerified = p.verification_status === 'VERIFIED' || p.confirm_count >= 1;
-
-      const polyFeature: GeoJSON.Feature = {
-        type: 'Feature',
-        id: `poly-${p.hotspot_id}`,
-        geometry: p.avoid_polygon,
-        properties: {
-          hotspot_id: p.hotspot_id,
-          severity_level: p.severity_level,
-          color: colorHex,
-          estimated_depth_cm: p.estimated_depth_cm,
-        },
-      };
 
       const lineFeature: GeoJSON.Feature = {
         type: 'Feature',
@@ -121,23 +107,13 @@ export default function MapCanvas({
       };
 
       if (isVerified) {
-        verifiedPolygons.push(polyFeature);
         verifiedLines.push(lineFeature);
       } else {
-        forecastPolygons.push(polyFeature);
         forecastLines.push(lineFeature);
       }
     });
 
     return {
-      verifiedPolygonFC: {
-        type: 'FeatureCollection' as const,
-        features: verifiedPolygons,
-      },
-      forecastPolygonFC: {
-        type: 'FeatureCollection' as const,
-        features: forecastPolygons,
-      },
       verifiedLineFC: {
         type: 'FeatureCollection' as const,
         features: verifiedLines,
@@ -155,103 +131,47 @@ export default function MapCanvas({
       if (!map.isStyleLoaded()) return;
 
       const {
-        verifiedPolygonFC,
-        forecastPolygonFC,
         verifiedLineFC,
         forecastLineFC,
       } = buildSpatialLayersData();
 
-      // 1. Vùng ngập dự báo (Polygon mờ rộng trên mặt đất)
-      if (!map.getSource('flood-forecast-polygons')) {
-        map.addSource('flood-forecast-polygons', {
-          type: 'geojson',
-          data: forecastPolygonFC,
-        });
-        map.addLayer({
-          id: 'layer-flood-buffer-forecast-polygon',
-          type: 'fill',
-          source: 'flood-forecast-polygons',
-          paint: {
-            'fill-color': ['get', 'color'],
-            'fill-opacity': 0.28,
-          },
-        });
-        map.addLayer({
-          id: 'layer-flood-buffer-forecast-border',
-          type: 'line',
-          source: 'flood-forecast-polygons',
-          paint: {
-            'line-color': ['get', 'color'],
-            'line-width': 1.5,
-            'line-dasharray': [3, 2],
-            'line-opacity': 0.6,
-          },
-        });
-      } else {
-        (map.getSource('flood-forecast-polygons') as maplibregl.GeoJSONSource).setData(
-          forecastPolygonFC
-        );
-      }
+      // Dọn dẹp triệt để các lớp polygon hình hộp to cũ (nếu có tồn đọng trong style)
+      if (map.getLayer('layer-flood-buffer-forecast-border')) map.removeLayer('layer-flood-buffer-forecast-border');
+      if (map.getLayer('layer-flood-buffer-forecast-polygon')) map.removeLayer('layer-flood-buffer-forecast-polygon');
+      if (map.getSource('flood-forecast-polygons')) map.removeSource('flood-forecast-polygons');
 
-      // 2. Vùng ngập xác minh (Polygon mặt nước đậm nét)
-      if (!map.getSource('flood-verified-polygons')) {
-        map.addSource('flood-verified-polygons', {
-          type: 'geojson',
-          data: verifiedPolygonFC,
-        });
-        map.addLayer({
-          id: 'layer-flood-buffer-verified-polygon',
-          type: 'fill',
-          source: 'flood-verified-polygons',
-          paint: {
-            'fill-color': ['get', 'color'],
-            'fill-opacity': 0.38,
-          },
-        });
-        map.addLayer({
-          id: 'layer-flood-buffer-verified-border',
-          type: 'line',
-          source: 'flood-verified-polygons',
-          paint: {
-            'line-color': ['get', 'color'],
-            'line-width': 2,
-            'line-opacity': 0.85,
-          },
-        });
-      } else {
-        (map.getSource('flood-verified-polygons') as maplibregl.GeoJSONSource).setData(
-          verifiedPolygonFC
-        );
-      }
+      if (map.getLayer('layer-flood-buffer-verified-border')) map.removeLayer('layer-flood-buffer-verified-border');
+      if (map.getLayer('layer-flood-buffer-verified-polygon')) map.removeLayer('layer-flood-buffer-verified-polygon');
+      if (map.getSource('flood-verified-polygons')) map.removeSource('flood-verified-polygons');
 
-      // 3. Tuyến đường ngập dự báo (Dải nước ngập trải rộng đè lên mặt đường thực tế)
+      // 1. TUYẾN ĐƯỜNG DỰ BÁO NGẬP (Chỉ vẽ đè lên đúng vệt đường thực tế - Nét đứt màu cảnh báo)
       if (!map.getSource('flood-forecast-lines')) {
         map.addSource('flood-forecast-lines', {
           type: 'geojson',
           data: forecastLineFC,
         });
-        // Lớp vầng nước ngập loang mép đường (Water Spill Halo)
+        // Viền nền màu trắng mờ ôm sát vệt đường
         map.addLayer({
-          id: 'layer-flood-forecast-halo',
+          id: 'layer-flood-forecast-casing',
           type: 'line',
           source: 'flood-forecast-lines',
           layout: { 'line-cap': 'round', 'line-join': 'round' },
           paint: {
-            'line-color': ['get', 'color'],
+            'line-color': '#FFFFFF',
             'line-width': [
               'interpolate',
               ['linear'],
               ['zoom'],
-              11, 8,
-              13, 16,
-              15, 28,
-              17, 44,
-              19, 64
+              11, 4,
+              13, 6,
+              15, 8.5,
+              17, 12,
+              19, 16
             ],
-            'line-opacity': 0.35,
+            'line-opacity': 0.85,
           },
         });
-        // Lớp nước ngập phủ chính trên mặt đường (Road Flood Corridor)
+        // Lớp nét đứt dự báo phủ ngay trên mặt đường
         map.addLayer({
           id: 'layer-flood-forecast-core',
           type: 'line',
@@ -263,13 +183,13 @@ export default function MapCanvas({
               'interpolate',
               ['linear'],
               ['zoom'],
-              11, 4,
-              13, 9,
-              15, 16,
-              17, 26,
-              19, 38
+              11, 2.5,
+              13, 4,
+              15, 6,
+              17, 9,
+              19, 12
             ],
-            'line-opacity': 0.85,
+            'line-opacity': 0.95,
             'line-dasharray': [3, 2],
           },
         });
@@ -279,34 +199,34 @@ export default function MapCanvas({
         );
       }
 
-      // 4. Tuyến đường ngập đã xác minh (Nước ngập thực tế tràn kín mặt đường)
+      // 2. TUYẾN ĐƯỜNG ĐÃ XÁC THỰC NGẬP THỰC TẾ (Nét liền đậm rõ ràng, vệt nước thật trên mặt đường)
       if (!map.getSource('flood-verified-lines')) {
         map.addSource('flood-verified-lines', {
           type: 'geojson',
           data: verifiedLineFC,
         });
-        // Vầng nước tràn mép đường
+        // Viền nền trắng tách biệt đường ngập khỏi nền bản đồ
         map.addLayer({
-          id: 'layer-flood-verified-halo',
+          id: 'layer-flood-verified-casing',
           type: 'line',
           source: 'flood-verified-lines',
           layout: { 'line-cap': 'round', 'line-join': 'round' },
           paint: {
-            'line-color': ['get', 'color'],
+            'line-color': '#FFFFFF',
             'line-width': [
               'interpolate',
               ['linear'],
               ['zoom'],
-              11, 10,
-              13, 20,
-              15, 34,
-              17, 52,
-              19, 74
+              11, 4.5,
+              13, 7,
+              15, 10,
+              17, 14,
+              19, 18
             ],
-            'line-opacity': 0.4,
+            'line-opacity': 0.95,
           },
         });
-        // Lớp nước ngập phủ đặc trên lòng đường
+        // Dải màu ngập đặc phủ kín lòng đường
         map.addLayer({
           id: 'layer-flood-verified-core',
           type: 'line',
@@ -318,16 +238,16 @@ export default function MapCanvas({
               'interpolate',
               ['linear'],
               ['zoom'],
-              11, 6,
-              13, 12,
-              15, 20,
-              17, 32,
-              19, 46
+              11, 3,
+              13, 5,
+              15, 7.5,
+              17, 11,
+              19, 14
             ],
-            'line-opacity': 0.95,
+            'line-opacity': 1.0,
           },
         });
-        // Vệt gợn sóng nước trắng đè trên vệt ngập để nhìn như mặt nước thật
+        // Vệt gợn sóng nước trắng nhấp nhô
         map.addLayer({
           id: 'layer-flood-verified-wave',
           type: 'line',
@@ -339,13 +259,13 @@ export default function MapCanvas({
               'interpolate',
               ['linear'],
               ['zoom'],
-              11, 1.5,
-              13, 3,
-              15, 5,
-              17, 8,
-              19, 12
+              11, 1,
+              13, 1.8,
+              15, 2.5,
+              17, 3.5,
+              19, 5
             ],
-            'line-opacity': 0.7,
+            'line-opacity': 0.85,
             'line-dasharray': [1.5, 3],
           },
         });
@@ -489,8 +409,6 @@ export default function MapCanvas({
     const clickableLayers = [
       'layer-flood-verified-core',
       'layer-flood-forecast-core',
-      'layer-flood-buffer-verified-polygon',
-      'layer-flood-buffer-forecast-polygon',
     ];
 
     clickableLayers.forEach((layerId) => {
