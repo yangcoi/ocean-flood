@@ -19,9 +19,9 @@
 
 ### 1. Nỗi đau thực tế tại TP.HCM (The Real Urban Problem)
 TP. Hồ Chí Minh là đô thị đặc thù chịu tác động đồng thời của **2 yếu tố thủy văn cực đoan**:
-1. **Triều cường bán nhật triều không đều**: Đỉnh triều dâng cao từ hạ lưu sông Sài Gòn & sông Đồng Điền (trên mức Báo động 3 $\ge 1.60\text{m}$), gây tràn bờ kênh rạch tại Quận 7, Quận 8, Nhà Bè.
-2. **Mưa dông nhiệt nhiệt đới có cường độ cực lớn**: Vũ lượng cục bộ có thể vượt $50\text{–}100\text{mm/h}$ trong thời gian ngắn, làm tê liệt hệ thống thoát nước tại Bình Thạnh, Thủ Đức.
-3. Khi **Mưa lớn trùng Đỉnh triều cường** (đặc biệt trong khung giờ tan tầm 17:00 – 18:30), hàng trăm ngàn người dân đi xe máy tay ga bị chết máy, xe ô tô đối mặt nguy cơ thủy kích hàng trăm triệu đồng, và các tuyến đường bị chia cắt hoàn toàn.
+1. **Triều cường bán nhật triều không đều**: Đỉnh triều dâng cao từ hạ lưu sông Sài Gòn & sông Đồng Điền (thường xuyên vượt mức Báo động 3 ≥ 1.60m), gây tràn bờ kênh rạch tại Quận 7, Quận 8, Nhà Bè.
+2. **Mưa dông nhiệt nhiệt đới có cường độ cực lớn**: Vũ lượng cục bộ có thể vượt 50 – 100 mm/h trong thời gian ngắn, làm tê liệt hệ thống thoát nước tại Bình Thạnh, Thủ Đức.
+3. Khi **Mưa lớn trùng Đỉnh triều cường** (đặc biệt trong khung giờ tan tầm 17:00 – 18:30), hàng trăm ngàn người dân đi xe máy tay ga bị chết máy, xe ô tô đối mặt nguy cơ thủy kích hàng trăm triệu đồng, và các tuyến đường huyết mạch bị chia cắt hoàn toàn.
 
 ### 2. Định vị dự án cá nhân (Personal Portfolio Context)
 > ⚠️ **Lưu ý phạm vi triển khai**: Đây là **dự án nghiên cứu & đồ án kỹ thuật cá nhân (Personal Showcase / Technical Prototype)** nhằm thử nghiệm các kiến trúc hệ thống hiện đại: Spatial GIS, WebGL Map Rendering, 5-Layer Crowd Verification và Flood-Aware Dynamic Routing.  
@@ -81,35 +81,50 @@ flowchart TD
 ### 1. Mô Hình Dự Báo Thủy Văn Đô Thị Kép (Urban Hydrology Dual-Engine)
 - **Vệ tinh Open-Meteo API**: Tích hợp lấy lượng mưa theo tọa độ trọng tâm của từng quận huyện trong thời gian thực, kết hợp dự báo lượng mưa tích lũy 1 giờ, 2 giờ, 3 giờ tới.
 - **Mô hình Thủy triều Thiên văn Điều hòa (Astronomical Tide Harmonic Model)**:
-  - Tự động tính toán mực nước bán nhật triều không đều dựa trên chu kỳ ngày trăng (Synodic month $29.53$ ngày) tại 2 trạm quan trắc trọng điểm: **Trạm Phú An** (Sông Sài Gòn) và **Trạm Nhà Bè** (Kênh Đồng Điền).
-  - Phân loại chính xác 4 cấp báo động thủy triều: Dưới BĐ1 ($< 1.40\text{m}$), Báo động 1 ($1.40\text{–}1.49\text{m}$), Báo động 2 ($1.50\text{–}1.59\text{m}$) và Báo động 3 ($\ge 1.60\text{m}$).
+  - Tự động tính toán mực nước bán nhật triều không đều dựa trên chu kỳ ngày trăng (Chu kỳ Synodic ~29.53 ngày) tại 2 trạm quan trắc trọng điểm: **Trạm Phú An** (Sông Sài Gòn) và **Trạm Nhà Bè** (Kênh Đồng Điền).
+  - Phân loại chính xác 4 cấp báo động thủy triều:
+    - **Dưới BĐ1**: Dưới 1.40m (Mực nước ổn định)
+    - **Báo động 1**: 1.40m – 1.49m (Chớm ngập vùng trũng thấp ven sông)
+    - **Báo động 2**: 1.50m – 1.59m (Ngập vừa, nước tràn một số mép cống)
+    - **Báo động 3**: Từ 1.60m trở lên (Nguy cơ ngập triều diện rộng toàn thành phố)
 - **Thuật toán Đánh giá Rủi ro Đa nhân tố**:
-  $$S_{\text{flood}} = w_r \cdot S_{\text{rain}} + w_t \cdot S_{\text{tide}} + w_h \cdot S_{\text{history}} + S_{\text{crowd}}$$
-  Tự động thích ứng trọng số theo vùng cao trình: khu vực dốc cao ($> 2.2\text{m}$) ưu tiên trọng số mưa ($65\%$), trong khi vùng trũng ven sông ($< 1.35\text{m}$) cân bằng giữa mưa ($42\%$) và triều cường ($40\%$).
+  ```text
+  S_flood = (w_rain × S_rain) + (w_tide × S_tide) + (w_history × S_history) + S_crowd
+  ```
+  Tự động thích ứng trọng số theo vùng cao trình: khu vực dốc cao (> 2.2m) ưu tiên trọng số mưa (65%), trong khi vùng trũng ven sông (< 1.35m) cân bằng giữa mưa (42%) và triều cường (40%).
 
 ### 2. Bộ Cảnh Báo Ngôn Ngữ Kép (Dual-Language Alert System)
-Khắc phục nhược điểm của các ứng dụng khí tượng chỉ hiển thị số liệu thô khiến người dân khó hình dung:
-- **Tầng Khoa học (Scientific Layer)**: Monospace badges hiển thị chính xác: Vũ lượng $\text{mm/h}$, Đỉnh triều $\text{m}$, Xác suất ngập $\%$ và Độ sâu ước tính $\text{cm}$.
+Khắc phục triệt để nhược điểm của các ứng dụng chỉ hiển thị số liệu khô khan:
+- **Tầng Khoa học (Scientific Layer)**: Các thẻ badge hiển thị chuẩn xác 4 thông số:
+  - Vũ lượng hiện tại & dự báo 3 giờ: `mm/h`
+  - Mực nước & Đỉnh triều trạm Phú An / Nhà Bè: `m`
+  - Xác suất ngập tính toán: `%`
+  - Độ sâu ngập ước tính theo mô hình địa hình: `cm`
 - **Tầng Đời thường (Everyday Practical Advice)**:
-  - **Dành cho Xe máy (Motorcycle)**: Cảnh báo theo chiều cao cơ học: *Ngập nửa bánh xe ($15\text{cm}$)* $\rightarrow$ *Ngập ngang ống pô ($30\text{cm}$, xe ga tuyệt đối không vào)* $\rightarrow$ *Ngập lút yên ($> 45\text{cm}$, nguy cơ trôi xe)*.
-  - **Dành cho Xe ô tô (Car / Sedan / SUV)**: Cảnh báo theo gầm xe: *Chạm gầm Sedan ($20\text{–}25\text{cm}$)* $\rightarrow$ *Ngập nửa bánh xe/Chạm nắp ca-pô ($> 45\text{cm}$, nguy cơ thủy kích do tạo sóng từ xe tải)* kèm khuyến nghị chuyển làn lên các trục đại lộ lớn.
+  - **Dành cho Xe máy (Motorcycle)**: Diễn giải trực quan theo các mốc vật lý của xe:
+    - **Ngập nửa bánh xe (~15 cm)**: Xe số đi an toàn, xe tay ga cần chú ý giảm tốc tránh sóng nước.
+    - **Ngập ngang ống pô (~30 cm)**: Xe tay ga có nguy cơ chết máy rất cao; khuyến nghị chuyển sang lộ trình né ngập.
+    - **Ngập lút yên (> 45 cm)**: Nguy hiểm cao, nguy cơ ngã xe trôi dạt do nước xiết; cấm lưu thông.
+  - **Dành cho Xe ô tô (Car / Sedan / SUV)**: Diễn giải theo khoảng sáng gầm xe:
+    - **Chạm gầm xe Sedan (~20 – 25 cm)**: Xe gầm thấp Sedan/Hatchback dễ bị tràn nước gầm; nên rẽ sớm sang đường lớn.
+    - **Ngập nửa bánh / Chạm nắp ca-pô (> 45 cm)**: Nguy cơ thủy kích cực nặng khi gặp sóng dội từ xe buýt/xe tải; cấm đi vào.
 
 ### 3. Động Cơ Kiểm Soát Báo Cáo Cộng Đồng 5 Lớp (5-Layer Crowd Verification Guard)
-Chống triệt để tình trạng báo tin giả, spam hoang mang dư luận hoặc báo cáo từ xa:
-1. **Lớp 1 — Rate Limiting per Device**: Khống chế tối đa $\le 5$ lượt báo cáo / giờ / thiết bị (dựa trên Device Fingerprint Hash). Vượt quá sẽ bị chặn với HTTP 429.
-2. **Lớp 2 — Hard Geofence $\le 500\text{m}$**: Tính toán khoảng cách Haversine giữa tọa độ GPS thiết bị và vị trí báo ngập. Nếu $> 500\text{m}$ hoặc GPS sai số $> 150\text{m}$ $\rightarrow$ Từ chối ngay lập tức (HTTP 422 `GEOFENCE_VIOLATION`).
-3. **Lớp 3 — Proof-of-Presence & EXIF Validation**: Bắt buộc chụp ảnh trực tiếp qua Camera (vô hiệu hóa chọn ảnh cũ từ thư viện), giải mã nén Client-side Canvas WebP $< 150\text{KB}$, kiểm tra tem thời gian EXIF $\le 10$ phút so với giờ hiện tại.
-4. **Lớp 4 — Spatial Clustering & Cross-Verification (Gom cụm $150\text{m}$)**:
-   - 1 người báo: Trạng thái `UNVERIFIED` (cảnh báo chú ý).
-   - $\ge 3$ thiết bị độc lập xác nhận chéo trong bán kính $150\text{m}$ (hoặc trùng điểm đen thủy văn đang đạt ngưỡng): Tự động thăng cấp thành `VERIFIED`.
-5. **Lớp 5 — Device Reputation Engine & Time-To-Live (TTL 90 phút)**: Tích lũy điểm uy tín ($+5$ điểm khi báo đúng, $-5$ điểm khi vi phạm). Báo cáo tự động hết hạn sau 90 phút nếu không có cập nhật mới.
+Chống triệt để tình trạng tin báo ảo, spam phá hoại hoặc báo cáo sai vị trí:
+1. **Lớp 1 — Rate Limiting per Device**: Khống chế tối đa ≤ 5 lượt báo cáo / giờ / thiết bị (dựa trên Device Fingerprint Hash). Vượt quá ngưỡng sẽ bị chặn ngay lập tức với HTTP 429.
+2. **Lớp 2 — Hard Geofence ≤ 500m**: Tính toán khoảng cách Haversine giữa tọa độ GPS thiết bị và vị trí báo ngập. Nếu lệch > 500m hoặc sai số định vị GPS > 150m, hệ thống từ chối ghi nhận (HTTP 422 `GEOFENCE_VIOLATION`).
+3. **Lớp 3 — Proof-of-Presence & EXIF Validation**: Bắt buộc chụp ảnh trực tiếp qua Camera điện thoại (không cho phép chọn ảnh cũ từ thư viện), nén Client-side Canvas WebP < 150KB, kiểm tra tem thời gian EXIF ≤ 10 phút so với thời điểm gửi.
+4. **Lớp 4 — Spatial Clustering & Cross-Verification (Gom cụm 150m)**:
+   - 1 người báo: Trạng thái `UNVERIFIED` (cảnh báo mức chú ý).
+   - Có từ 3 người độc lập trở lên cùng xác nhận tại chỗ trong bán kính 150m (hoặc trùng điểm đen thủy văn đang đạt ngưỡng): Tự động thăng cấp thành `VERIFIED`.
+5. **Lớp 5 — Device Reputation Engine & Time-To-Live (TTL 90 phút)**: Tích lũy điểm uy tín (+5 điểm khi báo đúng, -5 điểm khi vi phạm). Báo cáo tự động hết hạn sau 90 phút nếu không có người xác nhận nước dâng thêm.
 
 ### 4. Thuật Toán Tìm Lộ Trình Né Ngập Thông Minh (Flood-Aware Routing Engine)
-- **Không vẽ đường thẳng chim bay**: Toàn bộ lộ trình $100\%$ bám sát tim đường bộ thực tế thông qua OSRM (Open Source Routing Machine) và Google Maps Routes API Adapter.
-- **Hành lang đệm không gian (Corridor Buffer 35m)**: Sử dụng giải thuật khoảng cách đoạn thẳng `pointToSegmentDistanceMeters` để phát hiện chính xác khi nào tuyến đi cắt qua điểm ngập, không gây báo động giả đối với các cây cầu vượt hoặc đại lộ song song chạy sát điểm đen.
+- **100% Bám sát tim đường thực tế**: Loại bỏ hoàn toàn đường thẳng chim bay. Lộ trình uốn lượn chính xác theo dữ liệu OSRM (Open Source Routing Machine) và Google Maps Routes API.
+- **Hành lang đệm không gian (Corridor Buffer 35m)**: Sử dụng giải thuật khoảng cách đoạn thẳng `pointToSegmentDistanceMeters` để kiểm tra va chạm với đoạn ngập, tránh việc báo động giả đối với các cầu vượt trên cao hoặc tuyến đường song song sát bên.
 - **Phân tách bộ lọc theo loại xe**:
-  - **Chế độ Xe máy (Motorcycle)**: Ngưỡng ngập an toàn $< 20\text{cm}$.
-  - **Chế độ Ô tô (Car)**: Ngưỡng ngập an toàn $< 25\text{cm}$. **Khóa chính sách hẻm nhỏ**: Thuật toán cấm tuyệt đối việc điều hướng ô tô vào hẻm dân sinh cụt/hẹp, ưu tiên các đại lộ lớn có cốt nền cao (Phạm Văn Đồng, Điện Biên Phủ, Võ Văn Kiệt).
+  - **Chế độ Xe máy (Motorcycle)**: Ngưỡng ngập an toàn < 20 cm.
+  - **Chế độ Ô tô (Car)**: Ngưỡng ngập an toàn < 25 cm. **Khóa chính sách hẻm nhỏ**: Thuật toán cấm tuyệt đối việc dẫn ô tô vào hẻm dân sinh cụt/hẹp, ưu tiên các đại lộ lớn có cốt nền cao (Phạm Văn Đồng, Điện Biên Phủ, Võ Văn Kiệt).
 - **1-Tap Mở Ứng Dụng Google Maps Chính Chủ**: Tự động trích xuất các điểm né ngập (`avoidance waypoints`) và cấu hình tham số `travelmode=two-wheeler` / `travelmode=driving` để chuyển tiếp mượt mà sang ứng dụng Google Maps có sẵn trên máy người dùng.
 
 ---
@@ -125,7 +140,7 @@ Chống triệt để tình trạng báo tin giả, spam hoang mang dư luận h
 | **Routing Engines** | **OSRM Public API + Google Routes Adapter** | Tính toán lộ trình đường bộ thực tế, giải mã Polyline, hỗ trợ fallback nội bộ. |
 | **Khí tượng & Thủy văn** | **Open-Meteo Satellite API** | Dữ liệu lượng mưa thời gian thực kết hợp thuật toán tính triều thiên văn. |
 | **Kiểm thử tự động** | **Node.js Automated Test Suite** | 19 kịch bản kiểm thử tích hợp (Integration & E2E API tests). |
-| **Thiết kế UI/UX** | **Tailwind CSS 3.4 & Lucide Icons** | Chuẩn LibreUIUX Design System: Glassmorphism `backdrop-blur-md`, Mobile-First, Touch Target $\ge 48\text{px}$. |
+| **Thiết kế UI/UX** | **Tailwind CSS 3.4 & Lucide Icons** | Chuẩn LibreUIUX Design System: Glassmorphism `backdrop-blur-md`, Mobile-First, Touch Target ≥ 48px. |
 | **Triển khai Mobile** | **Progressive Web App (PWA)** | Cài đặt trực tiếp lên màn hình chính (Add to Home Screen), Web App Manifest chuẩn standalone. |
 
 ---
