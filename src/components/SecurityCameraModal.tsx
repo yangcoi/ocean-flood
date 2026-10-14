@@ -1,15 +1,17 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import maplibregl from 'maplibre-gl';
 import {
   X,
-  Video,
   MapPin,
-  Radio,
+  ExternalLink,
+  ShieldCheck,
   Maximize2,
-  ShieldAlert,
-  Camera,
+  Clock,
+  Sparkles,
+  Smartphone,
+  Info,
 } from 'lucide-react';
 
 export interface ActiveCameraTarget {
@@ -29,205 +31,113 @@ export interface SecurityCameraModalProps {
 }
 
 /**
- * Màn hình Mô phỏng Luồng Video Camera Giao thông / An ninh 60fps trực tiếp tại nút giao
- * Không dùng iframe web bên ngoài (tránh lỗi quay vòng loading trên điện thoại).
+ * Placeholder cao cấp minh bạch cho Camera An ninh & Giao thông TTGT TP.HCM
+ * Đóng băng kết nối stream trực tiếp vì Sở GTVT / Cổng TTGT TP.HCM chưa mở public API stream cho bên thứ ba.
+ * Giữ giao diện chuẩn mực, trung thực, chuyên nghiệp và có nút dẫn thẳng về nguồn chính thống.
  */
-function LiveCctvIntersectionCanvas({
-  cameraId,
-  streetLabel,
-  depthCm,
+function OfficialCctvPlaceholder({
+  camera,
   lat,
   lng,
+  depthCm,
 }: {
-  cameraId: string;
-  streetLabel: string;
-  depthCm: number;
+  camera: ActiveCameraTarget;
   lat: number;
   lng: number;
+  depthCm: number;
 }) {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    let animId = 0;
-    let tick = 0;
-
-    const render = () => {
-      tick += 1;
-      const w = canvas.width;
-      const h = canvas.height;
-
-      // 1. Bầu trời & cảnh giao lộ chiều tối mưa
-      const skyGrad = ctx.createLinearGradient(0, 0, 0, h * 0.45);
-      skyGrad.addColorStop(0, '#0f172a');
-      skyGrad.addColorStop(1, '#1e293b');
-      ctx.fillStyle = skyGrad;
-      ctx.fillRect(0, 0, w, h * 0.45);
-
-      // Các tòa nhà hai bên giao lộ
-      ctx.fillStyle = '#334155';
-      ctx.fillRect(10, h * 0.18, 65, h * 0.3);
-      ctx.fillRect(85, h * 0.24, 55, h * 0.24);
-      ctx.fillRect(w - 140, h * 0.2, 60, h * 0.28);
-      ctx.fillRect(w - 72, h * 0.15, 62, h * 0.33);
-
-      // Ánh đèn tòa nhà & đèn đường
-      ctx.fillStyle = '#fde047';
-      for (let i = 0; i < 6; i++) {
-        ctx.fillRect(22 + (i % 2) * 22, h * 0.22 + Math.floor(i / 2) * 14, 10, 7);
-        ctx.fillRect(w - 58 + (i % 2) * 20, h * 0.2 + Math.floor(i / 2) * 14, 10, 7);
-      }
-
-      // 2. Mặt đường giao lộ phối cảnh
-      ctx.fillStyle = '#1e293b';
-      ctx.beginPath();
-      ctx.moveTo(0, h);
-      ctx.lineTo(w * 0.28, h * 0.42);
-      ctx.lineTo(w * 0.72, h * 0.42);
-      ctx.lineTo(w, h);
-      ctx.closePath();
-      ctx.fill();
-
-      // Vạch kẻ đường giữa lộ
-      ctx.strokeStyle = 'rgba(255,255,255,0.45)';
-      ctx.lineWidth = 3;
-      ctx.setLineDash([14, 12]);
-      ctx.beginPath();
-      ctx.moveTo(w * 0.5, h * 0.44);
-      ctx.lineTo(w * 0.5, h);
-      ctx.stroke();
-      ctx.setLineDash([]);
-
-      // 3. Lớp nước ngập dâng trên mặt đường theo đúng depthCm
-      const waterRatio = Math.min(0.48, Math.max(0.12, (depthCm / 60) * 0.48));
-      const waterTopY = h - h * waterRatio;
-      const waterGrad = ctx.createLinearGradient(0, waterTopY, 0, h);
-      if (depthCm >= 35) {
-        waterGrad.addColorStop(0, 'rgba(220, 38, 38, 0.58)');
-        waterGrad.addColorStop(1, 'rgba(127, 29, 29, 0.88)');
-      } else if (depthCm >= 20) {
-        waterGrad.addColorStop(0, 'rgba(234, 88, 12, 0.55)');
-        waterGrad.addColorStop(1, 'rgba(154, 52, 18, 0.85)');
-      } else {
-        waterGrad.addColorStop(0, 'rgba(37, 99, 235, 0.5)');
-        waterGrad.addColorStop(1, 'rgba(30, 58, 138, 0.82)');
-      }
-      ctx.fillStyle = waterGrad;
-      ctx.fillRect(0, waterTopY, w, h - waterTopY);
-
-      // Gợn sóng nước chuyển động
-      ctx.strokeStyle = 'rgba(255,255,255,0.45)';
-      ctx.lineWidth = 1.5;
-      for (let wIdx = 0; wIdx < 4; wIdx++) {
-        const yWave = waterTopY + 10 + wIdx * 16;
-        ctx.beginPath();
-        for (let x = 20; x < w - 20; x += 25) {
-          const offset = Math.sin((x + tick * 2.5 + wIdx * 20) * 0.06) * 3;
-          if (x === 20) ctx.moveTo(x, yWave + offset);
-          else ctx.lineTo(x, yWave + offset);
-        }
-        ctx.stroke();
-      }
-
-      // 4. Các phương tiện di chuyển thực tế kèm AI Bounding Box nhận diện
-      const car1Y = h * 0.48 + ((tick * 0.9) % (h * 0.42));
-      const car1Scale = 0.6 + ((car1Y - h * 0.48) / (h * 0.42)) * 0.7;
-      const car1X = w * 0.37 - (car1Scale - 0.6) * 55;
-
-      // Vẽ Ô tô + AI Box
-      ctx.fillStyle = '#e2e8f0';
-      const cw = 42 * car1Scale;
-      const ch = 26 * car1Scale;
-      ctx.fillRect(car1X, car1Y, cw, ch);
-      // Đèn pha ô tô
-      ctx.fillStyle = '#fef08a';
-      ctx.fillRect(car1X + 3, car1Y + ch - 6, 7, 5);
-      ctx.fillRect(car1X + cw - 10, car1Y + ch - 6, 7, 5);
-      // Khung AI nhận diện Ô tô
-      ctx.strokeStyle = '#38bdf8';
-      ctx.lineWidth = 1.5;
-      ctx.strokeRect(car1X - 4, car1Y - 4, cw + 8, ch + 8);
-      ctx.fillStyle = '#0284c7';
-      ctx.fillRect(car1X - 4, car1Y - 16, 68, 12);
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 9px monospace';
-      ctx.fillText('OTO 94%', car1X, car1Y - 7);
-
-      // Vẽ Xe máy bên làn phải + AI Box
-      const bikeY = h * 0.88 - ((tick * 0.75) % (h * 0.38));
-      const bikeX = w * 0.62;
-      ctx.fillStyle = '#fb923c';
-      ctx.fillRect(bikeX, bikeY, 18, 24);
-      ctx.strokeStyle = '#facc15';
-      ctx.lineWidth = 1.5;
-      ctx.strokeRect(bikeX - 4, bikeY - 4, 26, 30);
-      ctx.fillStyle = '#ca8a04';
-      ctx.fillRect(bikeX - 4, bikeY - 16, 76, 12);
-      ctx.fillStyle = '#ffffff';
-      ctx.fillText('XE MAY 96%', bikeX - 1, bikeY - 7);
-
-      // 5. Hạt mưa rơi thời gian thực
-      ctx.strokeStyle = 'rgba(186, 230, 253, 0.45)';
-      ctx.lineWidth = 1;
-      for (let r = 0; r < 28; r++) {
-        const rx = ((r * 37 + tick * 3) % w);
-        const ry = ((r * 29 + tick * 9) % h);
-        ctx.beginPath();
-        ctx.moveTo(rx, ry);
-        ctx.lineTo(rx - 4, ry + 11);
-        ctx.stroke();
-      }
-
-      // 6. OSD Header & Footer chuẩn Camera An ninh / Giao thông
-      const now = new Date();
-      const hh = now.getHours().toString().padStart(2, '0');
-      const mm = now.getMinutes().toString().padStart(2, '0');
-      const ss = now.getSeconds().toString().padStart(2, '0');
-
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.72)';
-      ctx.fillRect(0, 0, w, 26);
-      ctx.fillRect(0, h - 24, w, 24);
-
-      ctx.fillStyle = '#ef4444';
-      ctx.beginPath();
-      ctx.arc(14, 13, 4.5, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 10px monospace';
-      ctx.fillText(`LIVE [${cameraId}] • KHUNG GIỜ ${hh}:${mm}:${ss}`, 24, 16);
-
-      ctx.fillStyle = '#4ade80';
-      ctx.fillText(
-        `📍 ${lat.toFixed(4)}N, ${lng.toFixed(4)}E • MỰC NƯỚC AI: ~${depthCm}CM`,
-        10,
-        h - 8
-      );
-
-      animId = requestAnimationFrame(render);
-    };
-
-    animId = requestAnimationFrame(render);
-    return () => cancelAnimationFrame(animId);
-  }, [cameraId, streetLabel, depthCm, lat, lng]);
-
   return (
-    <canvas
-      ref={canvasRef}
-      width={400}
-      height={210}
-      className="w-full h-52 rounded-2xl border-2 border-slate-800 shadow-inner bg-slate-950 block"
-    />
+    <div className="relative w-full rounded-2xl bg-gradient-to-b from-slate-900 via-slate-950 to-slate-900 border-2 border-slate-700/80 p-5 text-white overflow-hidden shadow-2xl">
+      {/* Nền hiệu ứng vi mạch / lưới quét giao thông nhẹ nhàng */}
+      <div
+        className="absolute inset-0 opacity-10 pointer-events-none"
+        style={{
+          backgroundImage:
+            'radial-gradient(circle at 50% 50%, rgba(26,115,232,0.3) 0%, transparent 70%), linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.05) 1px, transparent 1px)',
+          backgroundSize: '100% 100%, 20px 20px, 20px 20px',
+        }}
+      />
+
+      {/* Dải trạng thái đầu khung */}
+      <div className="relative z-10 flex items-center justify-between border-b border-white/10 pb-3 mb-4">
+        <div className="flex items-center gap-2">
+          <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" />
+          <span className="text-xs font-mono font-bold text-amber-300 uppercase tracking-wider">
+            TRỤ CAMERA TTGT • MÃ: {camera.id}
+          </span>
+        </div>
+        <span className="px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-400/30 text-[10px] font-black">
+          CỔNG TTGT TP.HCM
+        </span>
+      </div>
+
+      {/* Nội dung thông điệp chính sách API chính thống */}
+      <div className="relative z-10 space-y-3.5 my-2">
+        <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center mx-auto shadow-lg shadow-blue-500/20">
+          <Smartphone className="w-7 h-7" />
+        </div>
+
+        <div className="text-center space-y-1.5 max-w-md mx-auto">
+          <h3 className="text-sm sm:text-base font-black text-white leading-snug">
+            Tính năng đang được chuẩn bị kết nối cùng Cổng TTGT TP.HCM
+          </h3>
+          <p className="text-xs text-slate-300 leading-relaxed font-medium">
+            Hệ thống camera giao thông trực tiếp trên toàn địa bàn hiện do <strong>Trung tâm Quản lý Điều hành Giao thông Đô thị (Sở GTVT TP.HCM)</strong> vận hành độc quyền qua app TTGT và trang web chính thức.
+          </p>
+          <p className="text-[11px] text-amber-200/90 bg-amber-950/40 border border-amber-500/30 p-2.5 rounded-xl text-left leading-normal">
+            ℹ️ <strong>Cam kết minh bạch:</strong> Ocean Flood không sử dụng luồng video giả lập. Luồng hình ảnh thực tế sẽ được tích hợp chính thức ngay khi Cổng TTGT TP.HCM phát hành cổng API liên thông dữ liệu mở cho cộng đồng.
+          </p>
+        </div>
+
+        {/* Thông tin vị trí trụ cam được xác thực */}
+        <div className="grid grid-cols-2 gap-2 text-[11px] font-medium bg-slate-800/80 p-3 rounded-xl border border-white/10">
+          <div>
+            <span className="text-slate-400 block text-[10px]">Tọa độ nút giao:</span>
+            <span className="font-mono text-emerald-300 font-bold">
+              {lat.toFixed(4)}°N, {lng.toFixed(4)}°E
+            </span>
+          </div>
+          <div>
+            <span className="text-slate-400 block text-[10px]">Khoảng cách tâm ngập:</span>
+            <span className="text-white font-bold">
+              Cách ~{camera.distance_to_hotspot_m}m
+            </span>
+          </div>
+          <div className="col-span-2 pt-1 border-t border-white/10 flex items-center justify-between">
+            <span className="text-slate-400 text-[10px]">Ước tính mực nước đoạn này:</span>
+            <span className="text-red-400 font-bold">~{depthCm}cm</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Nút hành động mở ứng dụng TTGT chính thức */}
+      <div className="relative z-10 pt-3 border-t border-white/10 flex flex-col sm:flex-row gap-2">
+        <a
+          href="https://giaothong.hochiminhcity.gov.vn/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex-1 py-2.5 px-3 rounded-xl bg-[#1A73E8] hover:bg-blue-600 active:scale-95 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-md transition"
+        >
+          <span>Xem trên Cổng Web TTGT TP.HCM</span>
+          <ExternalLink className="w-3.5 h-3.5" />
+        </a>
+
+        <a
+          href="https://play.google.com/store/apps/details?id=com.fpt.hcmgis.giaothong"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 font-extrabold text-xs flex items-center justify-center gap-1.5 border border-slate-600 transition"
+        >
+          <span>App TTGT TP.HCM ↗</span>
+        </a>
+      </div>
+    </div>
   );
 }
 
 /**
- * Bản đồ con MapLibre GL khóa cứng ngay tại tọa độ cột Camera (Zoom 17.5)
- * Hiển thị tức thì trong 0.05s, không bao giờ bị treo loading như trang web cũ!
+ * Bản đồ con MapLibre GL khóa cứng ngay tại tọa độ cột Camera (Zoom 17)
+ * Giúp người dùng xác định chính xác giao lộ đặt camera trên nền bản đồ thật.
  */
 function DirectCameraMiniMap({
   lng,
@@ -240,9 +150,9 @@ function DirectCameraMiniMap({
   cameraName: string;
   depthCm: number;
 }) {
-  const containerRef = useRef<HTMLDivElement | null>(null);
+  const containerRef = React.useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (!containerRef.current) return;
 
     const miniMap = new maplibregl.Map({
@@ -256,10 +166,10 @@ function DirectCameraMiniMap({
     const el = document.createElement('div');
     el.innerHTML = `
       <div class="relative flex flex-col items-center">
-        <div class="px-2 py-0.5 rounded-full bg-red-600 text-white font-extrabold text-[10px] shadow-lg border border-white whitespace-nowrap mb-1">
-          📹 Cột Cam • Ngập ~${depthCm}cm
+        <div class="px-2 py-0.5 rounded-full bg-blue-600 text-white font-black text-[10px] shadow-lg border border-white whitespace-nowrap mb-1">
+          📍 Trụ Cam TTGT (~${depthCm}cm)
         </div>
-        <div class="w-8 h-8 rounded-full bg-slate-900 text-white border-2 border-amber-400 shadow-xl flex items-center justify-center text-sm">
+        <div class="w-8 h-8 rounded-full bg-slate-900 text-white border-2 border-blue-400 shadow-xl flex items-center justify-center text-sm">
           📹
         </div>
       </div>
@@ -275,30 +185,30 @@ function DirectCameraMiniMap({
   }, [lng, lat, cameraName, depthCm]);
 
   return (
-    <div className="relative w-full h-52 rounded-2xl overflow-hidden border-2 border-blue-500/50 shadow-inner">
+    <div className="relative w-full h-56 rounded-2xl overflow-hidden border-2 border-blue-500/40 shadow-inner">
       <div ref={containerRef} className="w-full h-full" />
-      <div className="absolute top-2 left-2 px-2.5 py-1 rounded-lg bg-slate-900/85 text-white text-[10px] font-bold pointer-events-none">
-        🎯 Đã khóa tâm đúng tọa độ nút giao ({lat.toFixed(4)}°N, {lng.toFixed(4)}°E)
+      <div className="absolute top-2 left-2 px-2.5 py-1 rounded-lg bg-slate-900/90 text-white text-[10px] font-bold pointer-events-none flex items-center gap-1">
+        <MapPin className="w-3 h-3 text-blue-400" />
+        <span>Vị trí cột camera tại nút giao ({lat.toFixed(4)}°N, {lng.toFixed(4)}°E)</span>
       </div>
     </div>
   );
 }
 
 /**
- * Trình xem Camera An ninh / Giao thông tại đúng nút giao
- * Tích hợp liên kết chính thức tới Cổng TTGT Công an TP.HCM & Sở GTVT (giaothong.hochiminhcity.gov.vn)
+ * Hộp thoại Trình xem Trụ Camera An ninh & TTGT TP.HCM
  */
 export default function SecurityCameraModal({
   camera,
   onClose,
   onFlyToCamera,
 }: SecurityCameraModalProps) {
-  const [activeTab, setActiveTab] = useState<'live_stream' | 'exact_map'>('live_stream');
+  const [activeTab, setActiveTab] = useState<'info_placeholder' | 'exact_map'>('info_placeholder');
 
   if (!camera) return null;
 
   const [lng, lat] = camera.coordinates;
-  const depthCm = camera.estimated_depth_cm ?? 35;
+  const depthCm = camera.estimated_depth_cm ?? 30;
 
   return (
     <div
@@ -307,27 +217,27 @@ export default function SecurityCameraModal({
       aria-modal="true"
       aria-label={`Camera giao thông ${camera.name}`}
     >
-      <div className="w-full bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col max-h-[92dvh]">
-        {/* 1. HEADER: Hệ thống Camera An ninh CSGT & TTGT TP.HCM */}
+      <div className="w-full max-w-lg mx-auto bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col max-h-[92dvh]">
+        {/* 1. HEADER: Định danh Trụ Camera Giao thông */}
         <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-blue-950 text-white p-3.5 flex items-start justify-between gap-2 border-b border-slate-800">
           <div className="min-w-0">
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className="px-2 py-0.5 rounded bg-blue-600 text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-sm">
-                👮 CAMERA AN NINH CSGT &amp; TTGT
+                👮 CAMERA TTGT TP.HCM
               </span>
-              <span className="px-2 py-0.5 rounded bg-red-600/90 text-white text-[10px] font-black uppercase tracking-wider flex items-center gap-1 animate-pulse">
-                <Radio className="w-3 h-3" />
-                TRỰC TIẾP 60FPS
+              <span className="px-2 py-0.5 rounded bg-amber-500/90 text-slate-950 text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
+                <Sparkles className="w-3 h-3" />
+                SẮP RA MẮT STREAM
               </span>
-              <span className="px-2 py-0.5 rounded bg-slate-800 text-emerald-400 font-mono text-[10px] font-bold">
+              <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-mono text-[10px] font-bold">
                 Mã: {camera.id}
               </span>
             </div>
-            <h2 className="text-sm font-extrabold text-white mt-1.5 leading-snug">
+            <h2 className="text-sm sm:text-base font-extrabold text-white mt-1.5 leading-snug">
               {camera.name}
             </h2>
             <p className="text-[11px] text-slate-300 font-mono mt-0.5">
-              📍 Tọa độ nút giao: {lat.toFixed(5)}°N, {lng.toFixed(5)}°E (Cách tâm ngập {camera.distance_to_hotspot_m}m)
+              📍 Vị trí nút giao: {lat.toFixed(5)}°N, {lng.toFixed(5)}°E (Cách điểm ngập {camera.distance_to_hotspot_m}m)
             </p>
           </div>
 
@@ -341,51 +251,19 @@ export default function SecurityCameraModal({
           </button>
         </div>
 
-        {/* 2. KHỐI LIÊN KẾT CHÍNH THỨC CỔNG TTGT CÔNG AN / GIAO THÔNG TP.HCM */}
-        <div className="bg-blue-50 dark:bg-slate-800/90 border-b border-blue-200/80 dark:border-slate-700 px-3.5 py-2.5 flex items-center justify-between gap-2.5">
-          <div className="min-w-0 flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm font-bold text-xs">
-              👮
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs font-black text-slate-900 dark:text-white truncate">
-                  Cổng TTGT Công an &amp; Sở GTVT TP.HCM
-                </span>
-                <span className="px-1.5 py-0.2 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 text-[9px] font-extrabold shrink-0">
-                  Chính thức
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-600 dark:text-slate-300 truncate">
-                Dữ liệu giám sát từ Cổng TTGT TP.HCM (giaothong.hochiminhcity.gov.vn)
-              </p>
-            </div>
-          </div>
-
-          <a
-            href="https://giaothong.hochiminhcity.gov.vn/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-3 py-1.5 rounded-xl bg-[#1A73E8] hover:bg-blue-600 text-white font-extrabold text-xs flex items-center gap-1 shrink-0 shadow-sm transition active:scale-95"
-            title="Mở Cổng Thông tin Giao thông TP.HCM"
-          >
-            <span>Mở Web Cổng TTGT ↗</span>
-          </a>
-        </div>
-
-        {/* 3. HAI TAB CHỌN XEM TRỰC TIẾP */}
+        {/* 2. TAB CHỌN XEM */}
         <div className="grid grid-cols-2 gap-1.5 p-2 bg-slate-100 dark:bg-slate-800/50">
           <button
             type="button"
-            onClick={() => setActiveTab('live_stream')}
+            onClick={() => setActiveTab('info_placeholder')}
             className={`py-2 px-2.5 rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 transition ${
-              activeTab === 'live_stream'
+              activeTab === 'info_placeholder'
                 ? 'bg-[#1A73E8] text-white shadow-sm'
                 : 'text-slate-600 dark:text-slate-300'
             }`}
           >
-            <Video className="w-3.5 h-3.5" />
-            <span>Luồng Camera AI Trực Tiếp</span>
+            <Info className="w-3.5 h-3.5" />
+            <span>Thông tin &amp; Cổng TTGT</span>
           </button>
 
           <button
@@ -398,19 +276,18 @@ export default function SecurityCameraModal({
             }`}
           >
             <MapPin className="w-3.5 h-3.5" />
-            <span>Vị trí Cột Cam trên Bản đồ</span>
+            <span>Vị trí Trụ trên Bản đồ</span>
           </button>
         </div>
 
-        {/* 4. NỘI DUNG HIỂN THỊ TỨC THÌ */}
+        {/* 3. NỘI DUNG HIỂN THỊ */}
         <div className="p-3.5 space-y-3 overflow-y-auto">
-          {activeTab === 'live_stream' ? (
-            <LiveCctvIntersectionCanvas
-              cameraId={camera.id}
-              streetLabel={camera.street_name || camera.name}
-              depthCm={depthCm}
+          {activeTab === 'info_placeholder' ? (
+            <OfficialCctvPlaceholder
+              camera={camera}
               lat={lat}
               lng={lng}
+              depthCm={depthCm}
             />
           ) : (
             <DirectCameraMiniMap
@@ -421,49 +298,26 @@ export default function SecurityCameraModal({
             />
           )}
 
-          {/* Hộp thông tin nhận diện tại chốt Camera */}
-          <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-1.5 text-xs">
-            <div className="flex items-center justify-between">
-              <span className="font-extrabold text-slate-900 dark:text-white flex items-center gap-1.5">
-                <ShieldAlert className="w-4 h-4 text-red-600" />
-                <span>Tình trạng nút giao qua Camera An ninh:</span>
-              </span>
-              <span className="px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300 font-extrabold text-[11px]">
-                Ngập ~{depthCm}cm
-              </span>
+          {/* Gợi ý đối chiếu nút giao */}
+          {camera.ttgt_reference_note && (
+            <div className="p-2.5 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900 text-xs text-blue-900 dark:text-blue-200 leading-relaxed">
+              💡 <strong>Gợi ý tra cứu Cổng TTGT:</strong> {camera.ttgt_reference_note}
             </div>
-            <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
-              📍 <strong>Quan sát:</strong> {camera.street_name || camera.name}. Camera an ninh giao thông được đối chiếu với hệ thống Cổng TTGT TP.HCM phục vụ giám sát và điều tiết phân luồng.
-            </p>
-            {camera.ttgt_reference_note && (
-              <p className="text-[11px] text-blue-700 dark:text-blue-300 bg-blue-50/80 dark:bg-blue-950/40 p-2 rounded-xl">
-                💡 <strong>Gợi ý đối chiếu:</strong> {camera.ttgt_reference_note}
-              </p>
-            )}
-          </div>
+          )}
 
-          {/* Nút Phóng to Bản đồ chính & Mở Cổng TTGT */}
-          <div className="grid grid-cols-2 gap-2">
+          {/* Nút Phóng to Bản đồ chính */}
+          <div className="pt-1">
             <button
               type="button"
               onClick={() => {
                 onFlyToCamera?.(camera.coordinates);
                 onClose();
               }}
-              className="py-3 px-3 rounded-2xl bg-[#1A73E8] hover:bg-blue-700 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition"
+              className="w-full py-3 px-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition"
             >
-              <Maximize2 className="w-4 h-4" />
-              <span>Trỏ Bản đồ Chính vào đây</span>
+              <Maximize2 className="w-4 h-4 text-blue-400" />
+              <span>Định vị và Phóng to vị trí này trên Bản đồ chính</span>
             </button>
-
-            <a
-              href="https://giaothong.hochiminhcity.gov.vn/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="py-3 px-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition"
-            >
-              <span>👮 Mở giaothong.hochiminhcity.gov.vn ↗</span>
-            </a>
           </div>
         </div>
       </div>

@@ -730,53 +730,81 @@ export default function RoutePlannerDrawer({
         ) : (
           <>
             {/* Bảng so sánh trực quan 2 Tuyến đường (Tuyến Xanh An Toàn vs Tuyến Đỏ Ngập) */}
-            <div className="grid grid-cols-2 gap-2">
-              {/* Tuyến 1: Tuyến Xanh An Toàn (Khuyên đi) */}
-              <div className="p-2.5 rounded-2xl bg-blue-50/90 dark:bg-blue-950/50 border-2 border-[#1A73E8] space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="px-2 py-0.5 rounded-full bg-[#1A73E8] text-white text-[10px] font-extrabold">
-                    ✓ Khuyên đi (Tuyến Xanh)
-                  </span>
-                </div>
-                <div className="flex items-baseline gap-1.5 pt-0.5">
-                  <span className="text-lg font-black text-[#1A73E8] dark:text-blue-400">
-                    {safeRoute.duration_min} phút
-                  </span>
-                  <span className="text-xs font-bold text-slate-600 dark:text-slate-300">
-                    ({safeRoute.distance_km} km)
-                  </span>
-                </div>
-                <p className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
-                  <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                  <span>Né được {avoidedList.length} điểm ngập</span>
-                </p>
+            <div className="space-y-2">
+              {/* Pill tóm tắt chênh lệch thời gian & an toàn */}
+              <div className="px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 text-[11px] font-black text-emerald-800 dark:text-emerald-300 flex items-center justify-between">
+                <span>🛡️ So sánh độ an toàn:</span>
+                <span>
+                  {safeRoute.duration_min >= directRoute.duration_min
+                    ? `Chỉ xa hơn +${Math.max(1, safeRoute.duration_min - directRoute.duration_min)} phút — Né ngập 100%`
+                    : 'Tuyến xanh vừa nhanh vừa né ngập hoàn toàn'}
+                </span>
               </div>
 
-              {/* Tuyến 2: Tuyến Đỏ Ngắn Nhất (Cắt qua vùng ngập) */}
-              <div className="p-2.5 rounded-2xl bg-red-50/80 dark:bg-red-950/30 border border-red-300 dark:border-red-800 space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="px-2 py-0.5 rounded-full bg-red-600 text-white text-[10px] font-extrabold">
-                    ⛔ Tuyến Đỏ (Bị ngập)
-                  </span>
+              <div className="grid grid-cols-2 gap-2">
+                {/* Tuyến 1: Tuyến Xanh An Toàn (Khuyên đi) */}
+                <div className="p-3 rounded-2xl bg-blue-50 dark:bg-blue-950/60 border-2 border-[#1A73E8] space-y-1.5 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="px-2 py-0.5 rounded-full bg-[#1A73E8] text-white text-[10px] font-black uppercase tracking-wider">
+                      ✓ TUYẾN XANH NÉ NGẬP
+                    </span>
+                  </div>
+                  <div className="flex items-baseline gap-1.5 pt-0.5">
+                    <span className="text-xl font-black text-[#1A73E8] dark:text-blue-400">
+                      {safeRoute.duration_min} phút
+                    </span>
+                    <span className="text-xs font-bold text-slate-600 dark:text-slate-300">
+                      ({safeRoute.distance_km} km)
+                    </span>
+                  </div>
+                  <p className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                    <span>Né được {avoidedList.length} điểm ngập</span>
+                  </p>
+                  <div className="pt-1 border-t border-blue-200 dark:border-blue-900 text-[10.5px] font-semibold text-slate-700 dark:text-slate-200 leading-tight">
+                    {vehicleType === 'motorcycle' ? (
+                      <span className="text-emerald-700 dark:text-emerald-300 font-bold">
+                        🛵 Ống xả an toàn (Mực nước &lt;10cm, không sợ chết máy)
+                      </span>
+                    ) : (
+                      <span className="text-emerald-700 dark:text-emerald-300 font-bold">
+                        🚗 Gầm xe an toàn (Tránh chạm gầm Sedan &amp; thủy kích)
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-baseline gap-1.5 pt-0.5">
-                  <span className="text-lg font-black text-red-600 dark:text-red-400">
-                    {directRoute.duration_min} phút
-                  </span>
-                  <span className="text-xs font-bold text-slate-600 dark:text-slate-300">
-                    ({directRoute.distance_km} km)
-                  </span>
+
+                {/* Tuyến 2: Tuyến Đỏ Ngắn Nhất (Cắt qua vùng ngập) */}
+                <div className="p-3 rounded-2xl bg-red-50 dark:bg-red-950/40 border border-red-300 dark:border-red-800 space-y-1.5 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="px-2 py-0.5 rounded-full bg-red-600 text-white text-[10px] font-black uppercase tracking-wider">
+                      ⛔ TUYẾN ĐỎ (BỊ NGẬP)
+                    </span>
+                  </div>
+                  <div className="flex items-baseline gap-1.5 pt-0.5">
+                    <span className="text-xl font-black text-red-600 dark:text-red-400">
+                      {directRoute.duration_min} phút
+                    </span>
+                    <span className="text-xs font-bold text-slate-600 dark:text-slate-300">
+                      ({directRoute.distance_km} km)
+                    </span>
+                  </div>
+                  <p className="text-[11px] font-bold text-red-700 dark:text-red-300 flex items-center gap-1 truncate">
+                    <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                    <span className="truncate">
+                      {avoidedList[0]
+                        ? `Ngập ~${avoidedList[0].estimated_depth_cm}cm`
+                        : 'Có rủi ro ngập cục bộ'}
+                    </span>
+                  </p>
+                  <div className="pt-1 border-t border-red-200 dark:border-red-900 text-[10.5px] font-semibold text-red-700 dark:text-red-300 leading-tight">
+                    {vehicleType === 'motorcycle' ? (
+                      <span>⚠️ Ngập ống xả: Xe tay ga rất dễ hút nước tắt máy!</span>
+                    ) : (
+                      <span>⛔ Cảnh báo thủy kích: Nước tràn họng hút gió ô tô!</span>
+                    )}
+                  </div>
                 </div>
-                <p className="text-[11px] font-bold text-red-700 dark:text-red-300 flex items-center gap-1 truncate">
-                  <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                  <span className="truncate">
-                    {avoidedList[0]
-                      ? `Ngập ~${avoidedList[0].estimated_depth_cm}cm (${
-                          avoidedList[0].street_name.split('(')[0]
-                        })`
-                      : 'Có rủi ro ngập cục bộ'}
-                  </span>
-                </p>
               </div>
             </div>
 

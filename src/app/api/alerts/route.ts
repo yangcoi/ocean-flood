@@ -48,11 +48,11 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
 
-    // Mặc định sử dụng kịch bản `peak_tide_rain` nếu không truyền hoặc hỗ trợ chuyển đổi linh hoạt với `live`
-    const rawScenario = (searchParams.get('scenario') || 'peak_tide_rain').trim() as ForecastScenario;
+    // Mặc định sử dụng kịch bản `live` (Open-Meteo API thực tế + Mô hình triều cường)
+    const rawScenario = (searchParams.get('scenario') || 'live').trim() as ForecastScenario;
     const scenario: ForecastScenario = VALID_SCENARIOS.includes(rawScenario)
       ? rawScenario
-      : 'peak_tide_rain';
+      : 'live';
 
     const rawDistrict = (searchParams.get('district') || 'ALL').trim();
     const districtFilter: HcmMvpDistrict | 'ALL' =

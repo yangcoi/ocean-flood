@@ -48,7 +48,7 @@ export default function OceanFloodHomePage() {
   // 1. MẶC ĐỊNH CHẾ ĐỘ BẢN ĐỒ SÁNG (LIGHT MODE) GIỐNG GOOGLE MAPS
   const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
   const [vehicleType, setVehicleType] = useState<VehicleType>('motorcycle');
-  const [scenario, setScenario] = useState<ForecastScenario>('peak_tide_rain');
+  const [scenario, setScenario] = useState<ForecastScenario>('live');
   const [selectedDistrict, setSelectedDistrict] = useState<HcmMvpDistrict | 'ALL'>('ALL');
 
   // 2. Dữ liệu Không gian từ API GET /api/alerts
@@ -532,7 +532,7 @@ export default function OceanFloodHomePage() {
                             {p.street_name.split('(')[0]}
                           </div>
                           <div className="text-[10px] text-[#1A73E8] dark:text-blue-400 font-bold truncate mt-0.5">
-                            {p.nearby_camera ? '📹 Có Cam CSGT' : '🔍 Xem chi tiết'}
+                            {p.nearby_camera ? '📹 Trụ Cam TTGT' : '🔍 Xem chi tiết'}
                           </div>
                         </div>
                       </button>
@@ -640,6 +640,11 @@ export default function OceanFloodHomePage() {
             setFocusCoordinates(cam.coordinates);
             setActiveSecurityCamera(cam);
           }}
+          districtRainfall={districtRainfall}
+          tidePhuAn={tidePhuAn}
+          tideNhaBe={tideNhaBe}
+          weatherSourceLabel={weatherSourceLabel}
+          isFallbackWeather={isFallbackWeather}
         />
 
         {/* 6. CHẾ ĐỘ CHỈ ĐƯỜNG & LIVE TRACK GPS KIỂU GOOGLE MAPS NAVIGATION */}
