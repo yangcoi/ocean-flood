@@ -1,0 +1,305 @@
+{
+  "audit_timestamp": "2026-10-14T10:11:24.147Z",
+  "summary": {
+    "total": 19,
+    "passed": 19,
+    "failed": 0,
+    "pass_rate_pct": 100
+  },
+  "results": [
+    {
+      "category": "SUITE 1 - Alerts API",
+      "testName": "1.1 Kiểm tra HTTP 200 và Latency < 1500ms",
+      "passed": true,
+      "details": "HTTP Status: 200, Latency: 78ms",
+      "evidence": {
+        "status": 200,
+        "latency_ms": 78
+      },
+      "timestamp": "2026-10-14T10:11:21.298Z"
+    },
+    {
+      "category": "SUITE 1 - Alerts API",
+      "testName": "1.2 Cấu trúc GeoJSON FeatureCollection & 18 Hotspots đầy đủ thuộc tính",
+      "passed": true,
+      "details": "FeatureCollection: true, Hotspots count: 18/18, Full attributes: true",
+      "evidence": {
+        "total_hotspots": 18,
+        "sample_hotspot": "HS_BT_01",
+        "sample_motorbike_advice": "⚠️ Cảnh báo nguy cơ ngập ngang ống pô xe máy (~30cm) tại Nguyễn Xí. Xe tay ga rất dễ tắt máy nếu đi qua; khuyến nghị đi lộ trình thay thế ít rủi ro ngập: Rẽ sớm qua trục Phạm Văn Đồng -> Nơ Trang Long -> Phan Đăng Lưu (tránh hoàn toàn ngã tư Nguyễn Xí - Ung Văn Khiêm).",
+        "sample_car_advice": "⚠️ Nguy cơ ngập chạm gầm xe Sedan (~30cm) trên Nguyễn Xí, dễ bị tràn nước hoặc thủy kích khi gặp sóng xe tải lớn. Nên chuyển sang lộ trình trục lớn: Đi thẳng đại lộ Phạm Văn Đồng -> Lê Quang Định -> Bạch Đằng (đường rộng, cốt nền cao, không rẽ vào Nguyễn Xí)."
+      },
+      "timestamp": "2026-10-14T10:11:21.308Z"
+    },
+    {
+      "category": "SUITE 1 - Alerts API",
+      "testName": "1.3 Kịch bản thời tiết: scenario=live",
+      "passed": true,
+      "details": "Scenario trả về: live (kỳ vọng: live), Hotspots: 18",
+      "evidence": {
+        "requested_scenario": "live",
+        "returned_scenario": "live",
+        "summary_counts": {
+          "total_hotspots": 18,
+          "high_risk_hotspots": 4,
+          "moderate_risk_hotspots": 8,
+          "verified_hotspots": 2,
+          "forecast_only_hotspots": 10,
+          "active_crowd_reports": 2,
+          "total_cameras": 18
+        }
+      },
+      "timestamp": "2026-10-14T10:11:21.314Z"
+    },
+    {
+      "category": "SUITE 1 - Alerts API",
+      "testName": "1.3 Kịch bản thời tiết: scenario=peak_tide_rain",
+      "passed": true,
+      "details": "Scenario trả về: peak_tide_rain (kỳ vọng: peak_tide_rain), Hotspots: 18",
+      "evidence": {
+        "requested_scenario": "peak_tide_rain",
+        "returned_scenario": "peak_tide_rain",
+        "summary_counts": {
+          "total_hotspots": 18,
+          "high_risk_hotspots": 18,
+          "moderate_risk_hotspots": 0,
+          "verified_hotspots": 2,
+          "forecast_only_hotspots": 16,
+          "active_crowd_reports": 2,
+          "total_cameras": 18
+        }
+      },
+      "timestamp": "2026-10-14T10:11:21.320Z"
+    },
+    {
+      "category": "SUITE 1 - Alerts API",
+      "testName": "1.3 Kịch bản thời tiết: scenario=local_heavy_rain",
+      "passed": true,
+      "details": "Scenario trả về: heavy_rain_only (kỳ vọng: heavy_rain_only), Hotspots: 18",
+      "evidence": {
+        "requested_scenario": "local_heavy_rain",
+        "returned_scenario": "heavy_rain_only",
+        "summary_counts": {
+          "total_hotspots": 18,
+          "high_risk_hotspots": 12,
+          "moderate_risk_hotspots": 6,
+          "verified_hotspots": 2,
+          "forecast_only_hotspots": 16,
+          "active_crowd_reports": 2,
+          "total_cameras": 18
+        }
+      },
+      "timestamp": "2026-10-14T10:11:21.326Z"
+    },
+    {
+      "category": "SUITE 1 - Alerts API",
+      "testName": "1.3 Kịch bản thời tiết: scenario=dry_sunny",
+      "passed": true,
+      "details": "Scenario trả về: dry_safe (kỳ vọng: dry_safe), Hotspots: 18",
+      "evidence": {
+        "requested_scenario": "dry_sunny",
+        "returned_scenario": "dry_safe",
+        "summary_counts": {
+          "total_hotspots": 18,
+          "high_risk_hotspots": 0,
+          "moderate_risk_hotspots": 0,
+          "verified_hotspots": 0,
+          "forecast_only_hotspots": 0,
+          "active_crowd_reports": 0,
+          "total_cameras": 18
+        }
+      },
+      "timestamp": "2026-10-14T10:11:21.332Z"
+    },
+    {
+      "category": "SUITE 1 - Alerts API",
+      "testName": "1.4 Danh mục Camera TTGT (Tọa độ WGS84, có liên kết Cổng TTGT TP.HCM)",
+      "passed": true,
+      "details": "Tổng số Camera TTGT: 18, Tọa độ chuẩn & TTGT note: true",
+      "evidence": {
+        "total_cameras": 18,
+        "sample_camera": "Camera TTGT: Nút giao Nguyễn Xí – Ung Văn Khiêm",
+        "sample_note": "Mở ứng dụng \"TTGT TP.HCM\" hoặc cổng giao thông chính thức -> Tìm từ khóa \"Nguyễn Xí - Ung Văn Khiêm\" (Quận Bình Thạnh) để xem hình ảnh giao thông thực tế."
+      },
+      "timestamp": "2026-10-14T10:11:21.339Z"
+    },
+    {
+      "category": "SUITE 2 - Verification Engine",
+      "testName": "2.1 Báo cáo hợp lệ tại hiện trường (GPS < 500m, có ảnh EXIF mới)",
+      "passed": true,
+      "details": "HTTP 201, accepted: true, 5/5 Layers passed: true",
+      "evidence": {
+        "status": 201,
+        "accepted": true,
+        "layers": [
+          "Rate Limit (≤ 5 báo cáo/giờ/thiết bị): PASS",
+          "Geofence cứng (GPS ≤ 500m & Accuracy ≤ 150m): PASS",
+          "Xác thực Ảnh hiện trường & EXIF (≤ 10 phút): PASS",
+          "Gom cụm 150m & Kiểm chứng chéo (Cross-check ≥ 3 người hoặc khớp Điểm đen): PASS",
+          "Điểm Uy tín Thiết bị & Thời hạn tự động hạ cấp (TTL 90 phút): PASS"
+        ],
+        "cluster_id": "cr-seed-nguyen-xi-01"
+      },
+      "timestamp": "2026-10-14T10:11:21.348Z"
+    },
+    {
+      "category": "SUITE 2 - Verification Engine",
+      "testName": "2.2 Báo cáo giả lập từ xa (>500m) bị Lớp 2 Geofence CHẶN ĐỨNG",
+      "passed": true,
+      "details": "HTTP 422, error_code: GEOFENCE_VIOLATION, Message: Vị trí GPS của bạn cách điểm báo cáo quá 500m. Chỉ người đang ở hiện trường mới có thể gửi báo cáo.",
+      "evidence": {
+        "status": 422,
+        "error_code": "GEOFENCE_VIOLATION",
+        "message": "Vị trí GPS của bạn cách điểm báo cáo quá 500m. Chỉ người đang ở hiện trường mới có thể gửi báo cáo."
+      },
+      "timestamp": "2026-10-14T10:11:21.354Z"
+    },
+    {
+      "category": "SUITE 2 - Verification Engine",
+      "testName": "2.3 Báo cáo thiếu ảnh hiện trường bị Lớp 3 CHẶN ĐỨNG",
+      "passed": true,
+      "details": "HTTP 422, error_code: MISSING_PHOTO, Message: Báo cáo ngập mới bắt buộc phải đính kèm ảnh chụp trực tiếp tại hiện trường (định dạng WebP/JPEG).",
+      "evidence": {
+        "status": 422,
+        "error_code": "MISSING_PHOTO"
+      },
+      "timestamp": "2026-10-14T10:11:21.358Z"
+    },
+    {
+      "category": "SUITE 2 - Verification Engine",
+      "testName": "2.4 Báo cáo dồn dập vượt Rate Limit (>5 lần/giờ/thiết bị) bị Lớp 1 CHẶN ĐỨNG",
+      "passed": true,
+      "details": "Chặn tại request thứ 6 (HTTP 429 RATE_LIMIT_EXCEEDED)",
+      "evidence": {
+        "rateLimitTriggered": true,
+        "triggerRequestNumber": 6
+      },
+      "timestamp": "2026-10-14T10:11:21.378Z"
+    },
+    {
+      "category": "SUITE 2 - Verification Engine",
+      "testName": "2.5 Nâng cấp tự động từ UNVERIFIED -> VERIFIED khi đủ >= 3 người xác nhận",
+      "passed": true,
+      "details": "Bước 1: UNVERIFIED (1) -> Bước 2: UNVERIFIED (2) -> Bước 3: VERIFIED (3)",
+      "evidence": {
+        "status1": "UNVERIFIED",
+        "count1": 1,
+        "status2": "UNVERIFIED",
+        "count2": 2,
+        "status3": "VERIFIED",
+        "count3": 3
+      },
+      "timestamp": "2026-10-14T10:11:21.391Z"
+    },
+    {
+      "category": "SUITE 3 - Routing Engine",
+      "testName": "3.1 Tuyến an toàn (Hàng Xanh -> Điện Biên Phủ): Không báo động giả, 100% tim đường thực tế",
+      "passed": true,
+      "details": "Flood detected: false, Status: LOW_RISK_DIRECT, Coords count: 62",
+      "evidence": {
+        "flood_detected": false,
+        "status": "LOW_RISK_DIRECT",
+        "coordinates_count": 62,
+        "distance_km": 2.01
+      },
+      "timestamp": "2026-10-14T10:11:22.175Z"
+    },
+    {
+      "category": "SUITE 3 - Routing Engine",
+      "testName": "3.2 Tuyến cắt điểm ngập (Xe máy ngưỡng 20cm): Phát hiện ngập, tuyến đỏ DANGER & tuyến xanh SAFE uốn lượn thực tế",
+      "passed": true,
+      "details": "Flood detected: true, Intersected: 2 hotspots, Safe route coords: 234",
+      "evidence": {
+        "intersected_hotspots": [
+          "Nguyễn Xí (Đoạn giao Ung Văn Khiêm – Đinh Bộ Lĩnh) (Bình Thạnh)",
+          "Đinh Bộ Lĩnh (Đoạn từ Bến xe Miền Đông cũ đến Chu Văn An) (Bình Thạnh)"
+        ],
+        "direct_distance_km": 5.04,
+        "safe_distance_km": 5.83,
+        "extra_time_min": 1,
+        "safe_coords_count": 234
+      },
+      "timestamp": "2026-10-14T10:11:22.676Z"
+    },
+    {
+      "category": "SUITE 3 - Routing Engine",
+      "testName": "3.3 Tuyến cho Ô tô (ngưỡng 25cm): Khóa chính sách hẻm nhỏ, chỉ đi đại lộ lớn",
+      "passed": true,
+      "details": "Vehicle: car, Threshold: 25cm, Policy: Chế độ Ô tô: Tuyến đường vòng tuân thủ nghiêm ngặt làn ô tô, đường một chiều, cấm quay đầu và tuyệt đối không rẽ vào hẻm dân sinh.",
+      "evidence": {
+        "vehicle_type": "car",
+        "vehicle_threshold_cm": 25,
+        "road_class_policy": "Chế độ Ô tô: Tuyến đường vòng tuân thủ nghiêm ngặt làn ô tô, đường một chiều, cấm quay đầu và tuyệt đối không rẽ vào hẻm dân sinh."
+      },
+      "timestamp": "2026-10-14T10:11:23.159Z"
+    },
+    {
+      "category": "SUITE 3 - Routing Engine",
+      "testName": "3.4 Deep-link mở ứng dụng Google Maps chính chủ (Origin, Destination, Waypoints, Travelmode)",
+      "passed": true,
+      "details": "Xe máy: travelmode=two-wheeler, Ô tô: travelmode=driving, Đầy đủ tọa độ chuẩn",
+      "evidence": {
+        "sample_motorcycle_link": "https://www.google.com/maps/dir/?api=1&origin=10.819,106.698&destination=10.796,106.722&waypoints=10.825,106.705&travelmode=two-wheeler",
+        "sample_car_link": "https://www.google.com/maps/dir/?api=1&origin=10.819,106.698&destination=10.796,106.722&waypoints=10.825,106.705&travelmode=driving"
+      },
+      "timestamp": "2026-10-14T10:11:23.160Z"
+    },
+    {
+      "category": "SUITE 4 - UI/UX & PWA",
+      "testName": "4.1 Kiểm tra file PWA Manifest (public/manifest.webmanifest)",
+      "passed": true,
+      "details": "Manifest exists: true, Standalone mode: true, Icons: 1",
+      "evidence": {
+        "manifest": {
+          "name": "Ocean Flood — Bản đồ Cảnh báo Ngập & Lộ trình Tránh ngập TP.HCM",
+          "short_name": "Ocean Flood",
+          "description": "Dự báo ngập sớm 1–3h, cảnh báo ngôn ngữ kép cho Xe máy & Ô tô, báo cáo cộng đồng 5 lớp tại TP.HCM (Bình Thạnh, Q7, Q8, Thủ Đức).",
+          "start_url": "/",
+          "display": "standalone",
+          "orientation": "portrait-primary",
+          "background_color": "#0B0F19",
+          "theme_color": "#3B82F6",
+          "lang": "vi",
+          "categories": [
+            "navigation",
+            "weather",
+            "utilities"
+          ],
+          "icons": [
+            {
+              "src": "/icon.svg",
+              "sizes": "any",
+              "type": "image/svg+xml",
+              "purpose": "any maskable"
+            }
+          ]
+        }
+      },
+      "timestamp": "2026-10-14T10:11:23.162Z"
+    },
+    {
+      "category": "SUITE 4 - UI/UX & PWA",
+      "testName": "4.2 Cấu hình Mobile Viewport & Theme-color trong Root Layout",
+      "passed": true,
+      "details": "Mobile viewport & meta tags configured: true",
+      "evidence": {
+        "hasViewport": true
+      },
+      "timestamp": "2026-10-14T10:11:23.162Z"
+    },
+    {
+      "category": "SUITE 4 - Cloudflare Tunnel",
+      "testName": "4.3 Cloudflare HTTPS Public Tunnel phản hồi HTTP 200 (Khả năng truy cập từ điện thoại)",
+      "passed": true,
+      "details": "HTTP Status: 200, Latency: 980ms, URL: https://accommodation-dakota-telephone-inspiration.trycloudflare.com",
+      "evidence": {
+        "url": "https://accommodation-dakota-telephone-inspiration.trycloudflare.com",
+        "status": 200,
+        "duration_ms": 980,
+        "server_header": "cloudflare",
+        "cf_ray": "a4a5ccb7fcf9c261-SIN"
+      },
+      "timestamp": "2026-10-14T10:11:24.146Z"
+    }
+  ]
+}

@@ -29,12 +29,14 @@ import {
   getCrowdStatsByHotspotId,
 } from '@/lib/verification-engine';
 
-const VALID_SCENARIOS: ForecastScenario[] = [
-  'live',
-  'peak_tide_rain',
-  'heavy_rain_only',
-  'dry_safe',
-];
+const SCENARIO_ALIASES: Record<string, ForecastScenario> = {
+  live: 'live',
+  peak_tide_rain: 'peak_tide_rain',
+  heavy_rain_only: 'heavy_rain_only',
+  local_heavy_rain: 'heavy_rain_only',
+  dry_safe: 'dry_safe',
+  dry_sunny: 'dry_safe',
+};
 
 const VALID_DISTRICTS: (HcmMvpDistrict | 'ALL')[] = [
   'ALL',
@@ -49,10 +51,8 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
 
     // Mặc định sử dụng kịch bản `live` (Open-Meteo API thực tế + Mô hình triều cường)
-    const rawScenario = (searchParams.get('scenario') || 'live').trim() as ForecastScenario;
-    const scenario: ForecastScenario = VALID_SCENARIOS.includes(rawScenario)
-      ? rawScenario
-      : 'live';
+    const rawScenario = (searchParams.get('scenario') || 'live').trim().toLowerCase();
+    const scenario: ForecastScenario = SCENARIO_ALIASES[rawScenario] || 'live';
 
     const rawDistrict = (searchParams.get('district') || 'ALL').trim();
     const districtFilter: HcmMvpDistrict | 'ALL' =
@@ -62,8 +62,10 @@ export async function GET(request: NextRequest) {
           ? (rawDistrict as HcmMvpDistrict)
           : 'ALL';
 
-    const crowdStatsByHotspotId = getCrowdStatsByHotspotId();
-    const activeCrowdReports = getActiveCrowdReports();
+    const crowdStatsByHotspotId =
+      scenario === 'dry_safe' ? {} : getCrowdStatsByHotspotId();
+    const activeCrowdReports =
+      scenario === 'dry_safe' ? [] : getActiveCrowdReports();
 
     const { conditions, features } = await generateAllHotspotForecasts({
       scenario,

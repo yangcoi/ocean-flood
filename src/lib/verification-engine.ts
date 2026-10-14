@@ -127,7 +127,7 @@ export interface VerificationOutcome {
 // BỘ NHỚ LƯU TRỮ TRạng THÁI CỘNG ĐỒNG & UY TÍN THIẾT BỊ (IN-MEMORY POSTGIS MOCK)
 // =============================================================================
 
-const RATE_LIMIT_MAX_PER_HOUR = 25;
+const RATE_LIMIT_MAX_PER_HOUR = 5;
 const GEOFENCE_MAX_DISTANCE_M = 500;
 const GPS_MAX_ACCURACY_M = 150;
 const EXIF_MAX_AGE_MINUTES = 10;

@@ -47,7 +47,16 @@ export async function POST(request: NextRequest) {
     const vehicleType: VehicleType =
       body?.vehicle_type === 'car' ? 'car' : 'motorcycle';
 
-    const scenario: ForecastScenario = body?.scenario || 'peak_tide_rain';
+    const SCENARIO_ALIASES: Record<string, ForecastScenario> = {
+      live: 'live',
+      peak_tide_rain: 'peak_tide_rain',
+      heavy_rain_only: 'heavy_rain_only',
+      local_heavy_rain: 'heavy_rain_only',
+      dry_safe: 'dry_safe',
+      dry_sunny: 'dry_safe',
+    };
+    const rawScenario = String(body?.scenario || 'peak_tide_rain').trim().toLowerCase();
+    const scenario: ForecastScenario = SCENARIO_ALIASES[rawScenario] || 'peak_tide_rain';
 
     const result = await computeFloodAwareRoutePlan({
       origin: {
