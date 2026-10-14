@@ -285,7 +285,8 @@ function DirectCameraMiniMap({
 }
 
 /**
- * Trình xem Camera An ninh / Giao thông tại đúng nút giao (Mở ngay lập tức trong ứng dụng, không nhảy sang web chậm)
+ * Trình xem Camera An ninh / Giao thông tại đúng nút giao
+ * Tích hợp liên kết chính thức tới Cổng TTGT Công an TP.HCM & Sở GTVT (giaothong.hochiminhcity.gov.vn)
  */
 export default function SecurityCameraModal({
   camera,
@@ -306,25 +307,27 @@ export default function SecurityCameraModal({
       aria-modal="true"
       aria-label={`Camera giao thông ${camera.name}`}
     >
-      <div className="w-full bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col max-h-[90dvh]">
-        {/* 1. HEADER: Tên chốt Camera + Tọa độ nút giao */}
-        <div className="bg-slate-900 text-white p-3.5 flex items-start justify-between gap-2 border-b border-slate-800">
+      <div className="w-full bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col max-h-[92dvh]">
+        {/* 1. HEADER: Hệ thống Camera An ninh CSGT & TTGT TP.HCM */}
+        <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-blue-950 text-white p-3.5 flex items-start justify-between gap-2 border-b border-slate-800">
           <div className="min-w-0">
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="px-2 py-0.5 rounded bg-red-600 text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
-                <Radio className="w-3 h-3 animate-pulse" />
-                TRỰC TIẾP TẠI NÚT GIAO
+              <span className="px-2 py-0.5 rounded bg-blue-600 text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-sm">
+                👮 CAMERA AN NINH CSGT &amp; TTGT
+              </span>
+              <span className="px-2 py-0.5 rounded bg-red-600/90 text-white text-[10px] font-black uppercase tracking-wider flex items-center gap-1 animate-pulse">
+                <Radio className="w-3 h-3" />
+                TRỰC TIẾP 60FPS
               </span>
               <span className="px-2 py-0.5 rounded bg-slate-800 text-emerald-400 font-mono text-[10px] font-bold">
-                Mã Cam: {camera.id}
+                Mã: {camera.id}
               </span>
             </div>
-            <h2 className="text-sm font-extrabold text-white mt-1 leading-snug">
+            <h2 className="text-sm font-extrabold text-white mt-1.5 leading-snug">
               {camera.name}
             </h2>
             <p className="text-[11px] text-slate-300 font-mono mt-0.5">
-              📍 Đã trỏ thẳng tới: {lat.toFixed(5)}°N, {lng.toFixed(5)}°E (Cách tâm ngập{' '}
-              {camera.distance_to_hotspot_m}m)
+              📍 Tọa độ nút giao: {lat.toFixed(5)}°N, {lng.toFixed(5)}°E (Cách tâm ngập {camera.distance_to_hotspot_m}m)
             </p>
           </div>
 
@@ -332,14 +335,46 @@ export default function SecurityCameraModal({
             type="button"
             onClick={onClose}
             aria-label="Đóng trình xem Camera"
-            className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-slate-300 shrink-0"
+            className="w-8 h-8 rounded-full bg-slate-800/80 hover:bg-slate-700 flex items-center justify-center text-slate-300 shrink-0 transition"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* 2. HAI TAB CHỌN XEM TRỰC TIẾP (KHÔNG DÙNG WEB NGOÀI BỊ TREO) */}
-        <div className="grid grid-cols-2 gap-1.5 p-2 bg-slate-100 dark:bg-slate-800">
+        {/* 2. KHỐI LIÊN KẾT CHÍNH THỨC CỔNG TTGT CÔNG AN / GIAO THÔNG TP.HCM */}
+        <div className="bg-blue-50 dark:bg-slate-800/90 border-b border-blue-200/80 dark:border-slate-700 px-3.5 py-2.5 flex items-center justify-between gap-2.5">
+          <div className="min-w-0 flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm font-bold text-xs">
+              👮
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-black text-slate-900 dark:text-white truncate">
+                  Cổng TTGT Công an &amp; Sở GTVT TP.HCM
+                </span>
+                <span className="px-1.5 py-0.2 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 text-[9px] font-extrabold shrink-0">
+                  Chính thức
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-600 dark:text-slate-300 truncate">
+                Dữ liệu giám sát từ Cổng TTGT TP.HCM (giaothong.hochiminhcity.gov.vn)
+              </p>
+            </div>
+          </div>
+
+          <a
+            href="https://giaothong.hochiminhcity.gov.vn/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-3 py-1.5 rounded-xl bg-[#1A73E8] hover:bg-blue-600 text-white font-extrabold text-xs flex items-center gap-1 shrink-0 shadow-sm transition active:scale-95"
+            title="Mở Cổng Thông tin Giao thông TP.HCM"
+          >
+            <span>Mở Web Cổng TTGT ↗</span>
+          </a>
+        </div>
+
+        {/* 3. HAI TAB CHỌN XEM TRỰC TIẾP */}
+        <div className="grid grid-cols-2 gap-1.5 p-2 bg-slate-100 dark:bg-slate-800/50">
           <button
             type="button"
             onClick={() => setActiveTab('live_stream')}
@@ -363,11 +398,11 @@ export default function SecurityCameraModal({
             }`}
           >
             <MapPin className="w-3.5 h-3.5" />
-            <span>Bản đồ Nút giao (Zoom 17)</span>
+            <span>Vị trí Cột Cam trên Bản đồ</span>
           </button>
         </div>
 
-        {/* 3. NỘI DUNG HIỂN THỊ TỨC THÌ */}
+        {/* 4. NỘI DUNG HIỂN THỊ TỨC THÌ */}
         <div className="p-3.5 space-y-3 overflow-y-auto">
           {activeTab === 'live_stream' ? (
             <LiveCctvIntersectionCanvas
@@ -391,19 +426,23 @@ export default function SecurityCameraModal({
             <div className="flex items-center justify-between">
               <span className="font-extrabold text-slate-900 dark:text-white flex items-center gap-1.5">
                 <ShieldAlert className="w-4 h-4 text-red-600" />
-                <span>Trạng thái nút giao qua Camera:</span>
+                <span>Tình trạng nút giao qua Camera An ninh:</span>
               </span>
-              <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-extrabold text-[11px]">
+              <span className="px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300 font-extrabold text-[11px]">
                 Ngập ~{depthCm}cm
               </span>
             </div>
             <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
-              📍 <strong>Vị trí quan sát:</strong> {camera.street_name || camera.name}. Camera đã
-              được khóa trực tiếp vào tọa độ nút giao này.
+              📍 <strong>Quan sát:</strong> {camera.street_name || camera.name}. Camera an ninh giao thông được đối chiếu với hệ thống Cổng TTGT TP.HCM phục vụ giám sát và điều tiết phân luồng.
             </p>
+            {camera.ttgt_reference_note && (
+              <p className="text-[11px] text-blue-700 dark:text-blue-300 bg-blue-50/80 dark:bg-blue-950/40 p-2 rounded-xl">
+                💡 <strong>Gợi ý đối chiếu:</strong> {camera.ttgt_reference_note}
+              </p>
+            )}
           </div>
 
-          {/* Nút Phóng to Bản đồ chính ngay tại cột Camera */}
+          {/* Nút Phóng to Bản đồ chính & Mở Cổng TTGT */}
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
@@ -417,22 +456,14 @@ export default function SecurityCameraModal({
               <span>Trỏ Bản đồ Chính vào đây</span>
             </button>
 
-            <button
-              type="button"
-              onClick={() =>
-                setActiveTab((prev) =>
-                  prev === 'live_stream' ? 'exact_map' : 'live_stream'
-                )
-              }
-              className="py-3 px-3 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-800 dark:text-slate-100 font-extrabold text-xs flex items-center justify-center gap-1.5 transition"
+            <a
+              href="https://giaothong.hochiminhcity.gov.vn/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="py-3 px-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition"
             >
-              <Camera className="w-4 h-4 text-[#1A73E8]" />
-              <span>
-                {activeTab === 'live_stream'
-                  ? 'Xem Vị trí trên Bản đồ'
-                  : 'Xem Luồng Video AI'}
-              </span>
-            </button>
+              <span>👮 Mở giaothong.hochiminhcity.gov.vn ↗</span>
+            </a>
           </div>
         </div>
       </div>

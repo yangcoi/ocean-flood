@@ -96,7 +96,7 @@ export default function OceanFloodHomePage() {
     useState<ActiveCameraTarget | null>(null);
   const [focusCoordinates, setFocusCoordinates] = useState<[number, number] | null>(null);
   const [showLegend, setShowLegend] = useState<boolean>(false);
-  const [showFloodStrip, setShowFloodStrip] = useState<boolean>(true);
+  const [showFloodStrip, setShowFloodStrip] = useState<boolean>(false);
 
   // 4. Trạng thái GPS & Khung hiển thị
   const [showGpsConsentModal, setShowGpsConsentModal] = useState<boolean>(false);
@@ -465,124 +465,116 @@ export default function OceanFloodHomePage() {
           />
         )}
 
-        {/* 4. BĂNG CHUYỀN THÔNG TIN & HÌNH ẢNH VÙNG NGẬP + CỤM NÚT ĐÁY KIỂU GOOGLE MAPS */}
+        {/* 4. THANH ĐIỀU KHIỂN ĐÁY TINH GỌN CHUẨN GOOGLE MAPS */}
         {!isRouteDrawerOpen && !selectedHotspot && !selectedCrowdReport && (
-          <div className="absolute inset-x-2.5 bottom-2.5 z-20 pointer-events-none flex flex-col gap-2">
-            {/* Hàng pill: Chọn Xe máy / Ô tô + Ẩn/Hiện danh sách vùng ngập + Đi làm 1 chạm */}
-            <div className="pointer-events-auto flex items-center justify-between gap-1.5">
-              <div className="flex items-center bg-white/95 dark:bg-slate-900/95 p-1 rounded-full shadow-lg border border-slate-200/90 dark:border-slate-700">
+          <div className="absolute inset-x-3 bottom-3 z-20 pointer-events-none flex flex-col gap-2">
+            {/* Khi người dùng muốn xem danh sách các điểm ngập: mở băng chuyền */}
+            {showFloodStrip && features.length > 0 && (
+              <div className="pointer-events-auto bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-3xl p-3 shadow-2xl border border-slate-200/90 dark:border-slate-700 space-y-2 animate-fade-in">
+                <div className="flex items-center justify-between px-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-black text-slate-900 dark:text-white">
+                      🌊 {features.length} Điểm ngập theo dõi
+                    </span>
+                    <span className="text-[10px] text-slate-500 font-bold">
+                      ({selectedDistrict === 'ALL' ? 'Toàn TP' : selectedDistrict})
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowFloodStrip(false)}
+                    className="text-[11px] font-black text-slate-500 hover:text-slate-800 dark:hover:text-white px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 transition"
+                  >
+                    Thu gọn ▼
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
+                  {features.map((f) => {
+                    const p = f.properties;
+                    const isSevere = p.severity_level >= 2;
+                    return (
+                      <button
+                        key={p.hotspot_id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedCrowdReport(null);
+                          setIsRouteDrawerOpen(false);
+                          setSelectedHotspot(p);
+                        }}
+                        className="w-56 shrink-0 text-left bg-slate-50 dark:bg-slate-800/80 rounded-2xl p-2.5 border border-slate-200/80 dark:border-slate-700/80 flex items-center gap-2.5 hover:border-blue-400 active:scale-[0.98] transition shadow-sm"
+                      >
+                        <div
+                          className={`w-12 h-12 rounded-xl shrink-0 flex flex-col items-center justify-center text-white font-black relative overflow-hidden ${
+                            p.severity_level === 3
+                              ? 'bg-gradient-to-b from-red-600 to-rose-700'
+                              : p.severity_level === 2
+                              ? 'bg-gradient-to-b from-orange-500 to-amber-600'
+                              : 'bg-gradient-to-b from-blue-500 to-indigo-600'
+                          }`}
+                        >
+                          <span className="text-xs font-black">~{p.estimated_depth_cm}</span>
+                          <span className="text-[8px] font-bold opacity-90">cm</span>
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1">
+                            <span
+                              className={`px-1.5 py-0.2 rounded text-[9px] font-black text-white ${
+                                isSevere ? 'bg-red-600' : 'bg-amber-500 text-slate-950'
+                              }`}
+                            >
+                              {p.severity_label}
+                            </span>
+                            <span className="text-[10px] text-slate-500 truncate">{p.district}</span>
+                          </div>
+                          <div className="text-xs font-black text-slate-900 dark:text-white truncate mt-0.5">
+                            {p.street_name.split('(')[0]}
+                          </div>
+                          <div className="text-[10px] text-[#1A73E8] dark:text-blue-400 font-bold truncate mt-0.5">
+                            {p.nearby_camera ? '📹 Có Cam CSGT' : '🔍 Xem chi tiết'}
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Thanh điều khiển chính kiểu Google Maps: Nổi bật, thanh thoát, không chiếm chỗ */}
+            <div className="pointer-events-auto flex items-center gap-2">
+              {/* Chọn Xe máy / Ô tô */}
+              <div className="flex items-center bg-white/95 dark:bg-slate-900/95 p-1 rounded-full shadow-lg border border-slate-200/90 dark:border-slate-700 shrink-0">
                 <button
                   type="button"
                   onClick={() => setVehicleType('motorcycle')}
-                  className={`px-2.5 py-1 rounded-full text-xs font-bold flex items-center gap-1 transition ${
+                  className={`px-3 py-2 rounded-full text-xs font-black flex items-center gap-1 transition ${
                     vehicleType === 'motorcycle'
                       ? 'bg-[#1A73E8] text-white shadow-sm'
-                      : 'text-slate-600 dark:text-slate-300'
+                      : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'
                   }`}
+                  title="Chế độ đi Xe máy"
                 >
-                  <Bike className="w-3.5 h-3.5" />
-                  <span>Xe máy</span>
+                  <Bike className="w-4 h-4" />
+                  <span className="hidden xs:inline">Xe máy</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setVehicleType('car')}
-                  className={`px-2.5 py-1 rounded-full text-xs font-bold flex items-center gap-1 transition ${
+                  className={`px-3 py-2 rounded-full text-xs font-black flex items-center gap-1 transition ${
                     vehicleType === 'car'
                       ? 'bg-[#1A73E8] text-white shadow-sm'
-                      : 'text-slate-600 dark:text-slate-300'
+                      : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'
                   }`}
+                  title="Chế độ đi Ô tô"
                 >
-                  <CarFront className="w-3.5 h-3.5" />
-                  <span>Ô tô</span>
+                  <CarFront className="w-4 h-4" />
+                  <span className="hidden xs:inline">Ô tô</span>
                 </button>
               </div>
 
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => setShowFloodStrip((prev) => !prev)}
-                  className="px-2.5 py-1.5 rounded-full bg-white/95 dark:bg-slate-900/95 text-slate-700 dark:text-slate-200 font-bold text-[11px] shadow-lg border border-slate-200/90 dark:border-slate-700 transition"
-                >
-                  {showFloodStrip ? 'Thu gọn thẻ ▼' : `🌊 Xem ${features.length} vùng ngập ▲`}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleQuickSavedCommuteClick}
-                  className="px-2.5 py-1.5 rounded-full bg-white/95 dark:bg-slate-900/95 text-slate-700 dark:text-slate-200 font-bold text-[11px] shadow-lg border border-slate-200/90 dark:border-slate-700 flex items-center gap-1 active:scale-95 transition"
-                >
-                  <Bookmark className="w-3.5 h-3.5 text-[#1A73E8]" />
-                  <span>Đi làm</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Băng chuyền ngang các vùng đang ngập kèm hình ảnh mực nước & Camera (Giống Google Maps Explore Strip) */}
-            {showFloodStrip && features.length > 0 && (
-              <div className="pointer-events-auto flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
-                {features.slice(0, 8).map((f) => {
-                  const p = f.properties;
-                  const isSevere = p.severity_level >= 2;
-                  return (
-                    <button
-                      key={p.hotspot_id}
-                      type="button"
-                      onClick={() => {
-                        setSelectedCrowdReport(null);
-                        setIsRouteDrawerOpen(false);
-                        setSelectedHotspot(p);
-                      }}
-                      className="w-60 shrink-0 text-left bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-2xl p-2.5 shadow-lg border border-slate-200/90 dark:border-slate-700 flex items-center gap-2.5 hover:border-blue-400 active:scale-[0.98] transition"
-                    >
-                      {/* Thumbnail trực quan mực nước & Camera */}
-                      <div
-                        className={`w-14 h-14 rounded-xl shrink-0 flex flex-col items-center justify-center text-white font-black relative overflow-hidden ${
-                          p.severity_level === 3
-                            ? 'bg-gradient-to-b from-slate-800 to-red-600'
-                            : p.severity_level === 2
-                            ? 'bg-gradient-to-b from-slate-800 to-orange-500'
-                            : 'bg-gradient-to-b from-slate-800 to-blue-600'
-                        }`}
-                      >
-                        <span className="text-[9px] font-bold bg-black/40 px-1 rounded">
-                          📸 ẢNH
-                        </span>
-                        <span className="text-xs font-black mt-0.5">
-                          ~{p.estimated_depth_cm}cm
-                        </span>
-                        <span className="text-[8px] opacity-90">
-                          {p.nearby_camera ? '📹 Có Cam' : '🌊 Thực tế'}
-                        </span>
-                      </div>
-
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1">
-                          <span
-                            className={`px-1.5 py-0.2 rounded text-[9px] font-extrabold text-white ${
-                              isSevere ? 'bg-red-600' : 'bg-amber-500 text-slate-950'
-                            }`}
-                          >
-                            {p.severity_label}
-                          </span>
-                          <span className="text-[10px] text-slate-500 truncate">
-                            {p.district}
-                          </span>
-                        </div>
-                        <div className="text-xs font-extrabold text-slate-900 dark:text-white truncate mt-0.5">
-                          {p.street_name.split('(')[0]}
-                        </div>
-                        <div className="text-[10px] text-[#1A73E8] dark:text-blue-400 font-bold truncate mt-0.5">
-                          Bấm xem hình ảnh & Camera ➔
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Hàng chính: 2 Nút lớn nổi bật ("Chỉ đường né ngập" & "📸 Chụp ảnh báo ngập") */}
-            <div className="pointer-events-auto flex items-center gap-2">
+              {/* Nút hành động chính: Chỉ đường né ngập (Google Maps Blue) */}
               <button
                 type="button"
                 onClick={() => {
@@ -590,22 +582,39 @@ export default function OceanFloodHomePage() {
                   setSelectedCrowdReport(null);
                   setIsRouteDrawerOpen(true);
                 }}
-                className="flex-1 h-12 px-4 rounded-full bg-[#1A73E8] hover:bg-blue-700 active:scale-[0.99] text-white font-extrabold text-sm shadow-[0_6px_20px_rgba(26,115,232,0.4)] flex items-center justify-center gap-2 transition"
+                className="flex-1 h-12 px-4 rounded-full bg-[#1A73E8] hover:bg-blue-600 active:scale-[0.98] text-white font-black text-xs sm:text-sm shadow-[0_4px_16px_rgba(26,115,232,0.35)] flex items-center justify-center gap-2 transition"
               >
-                <Navigation className="w-4 h-4 fill-white" />
-                <span>Chỉ đường né ngập</span>
+                <Navigation className="w-4 h-4 fill-white shrink-0" />
+                <span className="truncate">Chỉ đường né ngập</span>
               </button>
 
+              {/* Nút mở/đóng danh sách vùng ngập */}
+              <button
+                type="button"
+                onClick={() => setShowFloodStrip((prev) => !prev)}
+                className={`h-12 px-3 rounded-full font-black text-xs shadow-lg border flex items-center gap-1 shrink-0 transition active:scale-95 ${
+                  showFloodStrip
+                    ? 'bg-slate-900 text-white border-slate-700'
+                    : 'bg-white/95 dark:bg-slate-900/95 text-slate-800 dark:text-slate-200 border-slate-200/90 dark:border-slate-700'
+                }`}
+                title="Xem danh sách các điểm ngập"
+              >
+                <span>🌊 {features.length}</span>
+                <span className="text-[10px] opacity-70">{showFloodStrip ? '▼' : '▲'}</span>
+              </button>
+
+              {/* Nút chụp ảnh báo ngập nhanh */}
               <button
                 type="button"
                 onClick={() => {
                   setReportTargetHotspotId(null);
                   setIsReportModalOpen(true);
                 }}
-                className="h-12 px-4 rounded-full bg-orange-500 hover:bg-orange-600 active:scale-95 text-white font-extrabold text-sm shadow-[0_6px_20px_rgba(249,115,22,0.4)] flex items-center justify-center gap-1.5 shrink-0 transition"
+                className="w-12 h-12 rounded-full bg-orange-500 hover:bg-orange-600 active:scale-95 text-white shadow-lg shadow-orange-500/30 flex items-center justify-center shrink-0 transition"
+                title="Chụp ảnh báo ngập tại hiện trường"
+                aria-label="Chụp ảnh báo ngập"
               >
-                <Camera className="w-4 h-4" />
-                <span>📸 Chụp báo ngập</span>
+                <Camera className="w-5 h-5" />
               </button>
             </div>
           </div>
