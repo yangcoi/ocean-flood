@@ -414,7 +414,8 @@ export async function computeFloodAwareRoutePlan(
         ) <= 900)
   );
 
-  // Xây dựng hình học đường vòng an toàn (Safe Detour Geometry) dựa trên `safe_detour_geom` của điểm ngập chính
+  // Xây dựng hình học đường vòng an toàn (Safe Detour Geometry)
+  // Thuật toán tối ưu: Kiểm tra tránh giao cắt với TẤT CẢ các điểm ngập vượt ngưỡng trên hành lang
   const primaryHazard = intersectedFeatures[0];
   const detourWaypoints = primaryHazard.properties.detour_routes.safe_detour_geom.coordinates;
 
@@ -428,13 +429,16 @@ export async function computeFloodAwareRoutePlan(
     destCoord,
   ]);
 
+  // Kiểm tra xem tuyến OSRM detour có sạch 100% khỏi tất cả các điểm đen ngập hay không
+  const isDetourCleanFromAllHazards = (geom: GeoJsonLineString): boolean => {
+    return !hazardousHotspots.some((hs) => checkRouteIntersectsHotspot(geom, hs, 110));
+  };
+
   let safeGeom: GeoJsonLineString;
-  if (
-    osrmDetour &&
-    !checkRouteIntersectsHotspot(osrmDetour.geometry, primaryHazard, 110)
-  ) {
+  if (osrmDetour && isDetourCleanFromAllHazards(osrmDetour.geometry)) {
     safeGeom = osrmDetour.geometry;
   } else {
+    // Nếu OSRM vô tình dẫn qua một điểm ngập khác, ép dùng chuỗi waypoint tránh ngập đã thẩm định
     safeGeom = buildFallbackLineString(originCoord, destCoord, detourWaypoints);
   }
 
@@ -446,8 +450,8 @@ export async function computeFloodAwareRoutePlan(
   );
 
   const extraTimeMin = Math.max(
-    4,
-    Math.round(((safeDistanceKm - directDistanceKm) / avgSpeedKmh) * 60) + 3
+    3,
+    Math.round(((safeDistanceKm - directDistanceKm) / avgSpeedKmh) * 60) + 2
   );
   const safeDurationMin = directDurationMin + extraTimeMin;
 

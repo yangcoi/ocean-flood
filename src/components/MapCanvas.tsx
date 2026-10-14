@@ -161,7 +161,7 @@ export default function MapCanvas({
         forecastLineFC,
       } = buildSpatialLayersData();
 
-      // 1. Vùng ngập dự báo (Polygon mờ)
+      // 1. Vùng ngập dự báo (Polygon mờ rộng trên mặt đất)
       if (!map.getSource('flood-forecast-polygons')) {
         map.addSource('flood-forecast-polygons', {
           type: 'geojson',
@@ -173,7 +173,18 @@ export default function MapCanvas({
           source: 'flood-forecast-polygons',
           paint: {
             'fill-color': ['get', 'color'],
-            'fill-opacity': 0.12,
+            'fill-opacity': 0.28,
+          },
+        });
+        map.addLayer({
+          id: 'layer-flood-buffer-forecast-border',
+          type: 'line',
+          source: 'flood-forecast-polygons',
+          paint: {
+            'line-color': ['get', 'color'],
+            'line-width': 1.5,
+            'line-dasharray': [3, 2],
+            'line-opacity': 0.6,
           },
         });
       } else {
@@ -182,7 +193,7 @@ export default function MapCanvas({
         );
       }
 
-      // 2. Vùng ngập xác minh (Polygon)
+      // 2. Vùng ngập xác minh (Polygon mặt nước đậm nét)
       if (!map.getSource('flood-verified-polygons')) {
         map.addSource('flood-verified-polygons', {
           type: 'geojson',
@@ -194,7 +205,17 @@ export default function MapCanvas({
           source: 'flood-verified-polygons',
           paint: {
             'fill-color': ['get', 'color'],
-            'fill-opacity': 0.18,
+            'fill-opacity': 0.38,
+          },
+        });
+        map.addLayer({
+          id: 'layer-flood-buffer-verified-border',
+          type: 'line',
+          source: 'flood-verified-polygons',
+          paint: {
+            'line-color': ['get', 'color'],
+            'line-width': 2,
+            'line-opacity': 0.85,
           },
         });
       } else {
@@ -203,23 +224,34 @@ export default function MapCanvas({
         );
       }
 
-      // 3. Tuyến đường ngập dự báo (Nét đứt)
+      // 3. Tuyến đường ngập dự báo (Dải nước ngập trải rộng đè lên mặt đường thực tế)
       if (!map.getSource('flood-forecast-lines')) {
         map.addSource('flood-forecast-lines', {
           type: 'geojson',
           data: forecastLineFC,
         });
+        // Lớp vầng nước ngập loang mép đường (Water Spill Halo)
         map.addLayer({
-          id: 'layer-flood-forecast-casing',
+          id: 'layer-flood-forecast-halo',
           type: 'line',
           source: 'flood-forecast-lines',
           layout: { 'line-cap': 'round', 'line-join': 'round' },
           paint: {
-            'line-color': '#FFFFFF',
-            'line-width': 8,
-            'line-opacity': 0.9,
+            'line-color': ['get', 'color'],
+            'line-width': [
+              'interpolate',
+              ['linear'],
+              ['zoom'],
+              11, 8,
+              13, 16,
+              15, 28,
+              17, 44,
+              19, 64
+            ],
+            'line-opacity': 0.35,
           },
         });
+        // Lớp nước ngập phủ chính trên mặt đường (Road Flood Corridor)
         map.addLayer({
           id: 'layer-flood-forecast-core',
           type: 'line',
@@ -227,9 +259,18 @@ export default function MapCanvas({
           layout: { 'line-cap': 'round', 'line-join': 'round' },
           paint: {
             'line-color': ['get', 'color'],
-            'line-width': 5,
-            'line-dasharray': [2, 1.5],
-            'line-opacity': 0.95,
+            'line-width': [
+              'interpolate',
+              ['linear'],
+              ['zoom'],
+              11, 4,
+              13, 9,
+              15, 16,
+              17, 26,
+              19, 38
+            ],
+            'line-opacity': 0.85,
+            'line-dasharray': [3, 2],
           },
         });
       } else {
@@ -238,23 +279,34 @@ export default function MapCanvas({
         );
       }
 
-      // 4. Tuyến đường ngập đã xác minh (Nét liền nổi bật)
+      // 4. Tuyến đường ngập đã xác minh (Nước ngập thực tế tràn kín mặt đường)
       if (!map.getSource('flood-verified-lines')) {
         map.addSource('flood-verified-lines', {
           type: 'geojson',
           data: verifiedLineFC,
         });
+        // Vầng nước tràn mép đường
         map.addLayer({
-          id: 'layer-flood-verified-casing',
+          id: 'layer-flood-verified-halo',
           type: 'line',
           source: 'flood-verified-lines',
           layout: { 'line-cap': 'round', 'line-join': 'round' },
           paint: {
-            'line-color': '#FFFFFF',
-            'line-width': 10,
-            'line-opacity': 0.95,
+            'line-color': ['get', 'color'],
+            'line-width': [
+              'interpolate',
+              ['linear'],
+              ['zoom'],
+              11, 10,
+              13, 20,
+              15, 34,
+              17, 52,
+              19, 74
+            ],
+            'line-opacity': 0.4,
           },
         });
+        // Lớp nước ngập phủ đặc trên lòng đường
         map.addLayer({
           id: 'layer-flood-verified-core',
           type: 'line',
@@ -262,8 +314,39 @@ export default function MapCanvas({
           layout: { 'line-cap': 'round', 'line-join': 'round' },
           paint: {
             'line-color': ['get', 'color'],
-            'line-width': 6,
-            'line-opacity': 1,
+            'line-width': [
+              'interpolate',
+              ['linear'],
+              ['zoom'],
+              11, 6,
+              13, 12,
+              15, 20,
+              17, 32,
+              19, 46
+            ],
+            'line-opacity': 0.95,
+          },
+        });
+        // Vệt gợn sóng nước trắng đè trên vệt ngập để nhìn như mặt nước thật
+        map.addLayer({
+          id: 'layer-flood-verified-wave',
+          type: 'line',
+          source: 'flood-verified-lines',
+          layout: { 'line-cap': 'round', 'line-join': 'round' },
+          paint: {
+            'line-color': '#FFFFFF',
+            'line-width': [
+              'interpolate',
+              ['linear'],
+              ['zoom'],
+              11, 1.5,
+              13, 3,
+              15, 5,
+              17, 8,
+              19, 12
+            ],
+            'line-opacity': 0.7,
+            'line-dasharray': [1.5, 3],
           },
         });
       } else {

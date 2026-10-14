@@ -697,6 +697,8 @@ export default function OceanFloodHomePage() {
           onClose={() => setIsReportModalOpen(false)}
           deviceHash={deviceHash}
           defaultHotspotId={reportTargetHotspotId || selectedHotspot?.hotspot_id || null}
+          userGpsLocation={userGpsLocation}
+          onRequestGps={handleLocateUserClick}
           onReportAccepted={() => {
             fetchAlertsData();
             showToast('🎉 Đã cập nhật ảnh & báo cáo ngập lên bản đồ!');

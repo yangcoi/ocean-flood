@@ -1,17 +1,15 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   X,
   Camera,
   MapPin,
-  ShieldCheck,
-  ShieldAlert,
   CheckCircle2,
-  XCircle,
   Upload,
   Send,
-  Sparkles,
+  Loader2,
+  Navigation,
 } from 'lucide-react';
 import {
   FLOOD_HOTSPOTS_SEED,
@@ -20,7 +18,6 @@ import {
 } from '@/data/hcm-spatial-seed';
 import type {
   VisualDepthChoice,
-  VerificationLayerCheck,
   VerificationOutcome,
 } from '@/lib/verification-engine';
 
@@ -30,141 +27,144 @@ export interface CrowdReportModalProps {
   deviceHash: string;
   onReportAccepted: () => void;
   defaultHotspotId?: string | null;
+  userGpsLocation?: [number, number] | null;
+  onRequestGps?: () => void;
 }
 
-type GpsTestMode = 'ON_SITE_VALID' | 'SPAMMER_FAR_3KM';
-
-const DEPTH_BUTTONS: {
+const DEPTH_OPTIONS: {
   value: VisualDepthChoice;
   title: string;
   subtitle: string;
+  badge: string;
+  colorClass: string;
   activeClass: string;
-  defaultClass: string;
 }[] = [
   {
     value: 'WHEEL_15CM',
-    title: '🛞 Ngập bánh xe (~15cm)',
-    subtitle: 'Xâm xấp 1/3 bánh xe, đi chậm bắn nước',
+    title: '🛞 Mép vỉa hè (~15cm)',
+    subtitle: 'Nước xâm xấp mép đường, xe máy qua bình thường',
+    badge: '~15cm',
+    colorClass: 'text-amber-600 dark:text-amber-400',
     activeClass:
-      'ring-3 ring-[#F59E0B] bg-amber-500/20 border-[#F59E0B] text-amber-950 dark:text-amber-200',
-    defaultClass:
-      'bg-white/90 dark:bg-slate-800/90 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white',
+      'ring-2 ring-amber-500 bg-amber-50 dark:bg-amber-950/40 border-amber-500 text-slate-900 dark:text-white',
   },
   {
     value: 'EXHAUST_30CM',
-    title: '⚠️ Ngập ống pô / chạm gầm (~30cm)',
-    subtitle: 'Ngang ống xả xe máy, chạm sàn gầm Sedan',
+    title: '⚠️ Ống pô xe máy (~25–30cm)',
+    subtitle: 'Ngang ống xả, xe ga bắt đầu khó đi / dễ chết máy',
+    badge: '~30cm',
+    colorClass: 'text-orange-600 dark:text-orange-400',
     activeClass:
-      'ring-3 ring-[#EA580C] bg-orange-500/20 border-[#EA580C] text-orange-950 dark:text-orange-200',
-    defaultClass:
-      'bg-white/90 dark:bg-slate-800/90 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white',
+      'ring-2 ring-orange-500 bg-orange-50 dark:bg-orange-950/40 border-orange-500 text-slate-900 dark:text-white',
   },
   {
     value: 'SEAT_50CM',
-    title: '⛔ Ngập quá yên / nắp capo (>45cm)',
-    subtitle: 'Lút yên xe máy, tràn đèn pha ô tô — Tê liệt',
+    title: '⛔ Chạm gầm ô tô (>40cm)',
+    subtitle: 'Ngập lút bánh xe, tràn gầm Sedan — Rất nguy hiểm',
+    badge: '>40cm',
+    colorClass: 'text-red-600 dark:text-red-400',
     activeClass:
-      'ring-3 ring-[#DC2626] bg-red-500/20 border-[#DC2626] text-red-950 dark:text-red-200',
-    defaultClass:
-      'bg-white/90 dark:bg-slate-800/90 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white',
+      'ring-2 ring-red-500 bg-red-50 dark:bg-red-950/40 border-red-500 text-slate-900 dark:text-white',
   },
   {
     value: 'RECEDED_0CM',
     title: '✅ Nước đã rút hết (0cm)',
-    subtitle: 'Mặt đường đã khô ráo / thông thoáng trở lại',
+    subtitle: 'Mặt đường khô ráo, giao thông đã trở lại thông thoáng',
+    badge: '0cm',
+    colorClass: 'text-emerald-600 dark:text-emerald-400',
     activeClass:
-      'ring-3 ring-[#10B981] bg-emerald-500/20 border-[#10B981] text-emerald-950 dark:text-emerald-200',
-    defaultClass:
-      'bg-white/90 dark:bg-slate-800/90 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white',
+      'ring-2 ring-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500 text-slate-900 dark:text-white',
   },
 ];
 
 /**
- * Nén ảnh hoặc vẽ ảnh giả lập hiện trường bằng HTML5 Canvas xuống < 150KB (Walkthrough F3.1)
+ * Nén ảnh hiện trường bằng Canvas xuống < 150KB
  */
-async function generateCompressedFieldPhotoWebp(
-  streetLabel: string,
-  depthChoice: VisualDepthChoice,
-  sourceImageFile?: File
+async function compressImageToWebp(
+  file: File
 ): Promise<{ dataUrl: string; sizeKb: number; capturedIso: string }> {
+  const bitmap = await createImageBitmap(file);
+  const maxWidth = 960;
+  const maxHeight = 540;
+  const ratio = Math.min(maxWidth / bitmap.width, maxHeight / bitmap.height, 1);
+  const w = Math.round(bitmap.width * ratio);
+  const h = Math.round(bitmap.height * ratio);
+
   const canvas = document.createElement('canvas');
-  const maxWidth = 800;
-  const maxHeight = 450;
-  canvas.width = maxWidth;
-  canvas.height = maxHeight;
+  canvas.width = w;
+  canvas.height = h;
   const ctx = canvas.getContext('2d');
-
-  const nowIso = new Date().toISOString();
-
   if (ctx) {
-    if (sourceImageFile) {
-      // Nếu người dùng chụp/chọn ảnh thật từ thiết bị: vẽ lên Canvas và nén xuống <150KB
-      const bitmap = await createImageBitmap(sourceImageFile);
-      const ratio = Math.min(maxWidth / bitmap.width, maxHeight / bitmap.height, 1);
-      const w = Math.round(bitmap.width * ratio);
-      const h = Math.round(bitmap.height * ratio);
-      canvas.width = w;
-      canvas.height = h;
-      ctx.drawImage(bitmap, 0, 0, w, h);
-    } else {
-      // Vẽ hình mô phỏng ảnh chụp hiện trường dưới mưa có đóng dấu EXIF Timestamp
-      const grad = ctx.createLinearGradient(0, 0, 0, maxHeight);
-      grad.addColorStop(0, '#0F172A');
-      grad.addColorStop(0.6, '#1E293B');
-      grad.addColorStop(1, '#0369A1');
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, maxWidth, maxHeight);
-
-      // Vẽ vệt mưa và sóng nước
-      ctx.strokeStyle = 'rgba(148, 163, 184, 0.35)';
-      ctx.lineWidth = 1.5;
-      for (let i = 0; i < 45; i++) {
-        const x = (i * 23) % maxWidth;
-        const y = (i * 37) % (maxHeight - 100);
-        ctx.beginPath();
-        ctx.moveTo(x, y);
-        ctx.lineTo(x - 10, y + 28);
-        ctx.stroke();
-      }
-
-      // Khung thông tin EXIF trên ảnh
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
-      ctx.fillRect(20, maxHeight - 125, maxWidth - 40, 105);
-      ctx.strokeStyle = '#38BDF8';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(20, maxHeight - 125, maxWidth - 40, 105);
-
-      ctx.fillStyle = '#F8FAFC';
-      ctx.font = 'bold 20px sans-serif';
-      ctx.fillText(`📸 ẢNH HIỆN TRƯỜNG: ${streetLabel.slice(0, 42)}`, 36, maxHeight - 88);
-
-      ctx.fillStyle = '#FDBA74';
-      ctx.font = 'bold 17px monospace';
-      ctx.fillText(
-        `Mức ngập: ${depthChoice} • EXIF: ${new Date().toLocaleTimeString('vi-VN')}`,
-        36,
-        maxHeight - 58
-      );
-
-      ctx.fillStyle = '#86EFAC';
-      ctx.font = '15px monospace';
-      ctx.fillText('✓ Client-side Canvas WebP Compression (< 150KB)', 36, maxHeight - 32);
-    }
+    ctx.drawImage(bitmap, 0, 0, w, h);
   }
 
-  let dataUrl = canvas.toDataURL('image/webp', 0.72);
+  let dataUrl = canvas.toDataURL('image/webp', 0.75);
   if (!dataUrl.startsWith('data:image/webp')) {
-    dataUrl = canvas.toDataURL('image/jpeg', 0.72);
+    dataUrl = canvas.toDataURL('image/jpeg', 0.75);
   }
-  const sizeKb = Math.max(
-    8.5,
-    Number(((dataUrl.length * 0.75) / 1024).toFixed(1))
-  );
+  const sizeKb = Number(((dataUrl.length * 0.75) / 1024).toFixed(1));
 
   return {
     dataUrl,
     sizeKb,
-    capturedIso: nowIso,
+    capturedIso: new Date(file.lastModified || Date.now()).toISOString(),
+  };
+}
+
+/**
+ * Sinh ảnh mẫu hiện trường khi người dùng chưa chụp ảnh vật lý
+ */
+function createDefaultPlaceholderPhoto(
+  streetLabel: string,
+  depth: VisualDepthChoice
+): { dataUrl: string; sizeKb: number; capturedIso: string } {
+  const canvas = document.createElement('canvas');
+  canvas.width = 800;
+  canvas.height = 450;
+  const ctx = canvas.getContext('2d');
+  if (ctx) {
+    const grad = ctx.createLinearGradient(0, 0, 0, 450);
+    grad.addColorStop(0, '#1E293B');
+    grad.addColorStop(0.7, '#0F172A');
+    grad.addColorStop(1, '#0284C7');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 800, 450);
+
+    // Gợn sóng nước
+    ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
+    ctx.lineWidth = 2;
+    for (let y = 300; y < 450; y += 30) {
+      ctx.beginPath();
+      for (let x = 0; x < 800; x += 40) {
+        ctx.quadraticCurveTo(x + 20, y - 8, x + 40, y);
+      }
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+    ctx.fillRect(30, 320, 740, 100);
+    ctx.strokeStyle = '#38BDF8';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(30, 320, 740, 100);
+
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = 'bold 22px sans-serif';
+    ctx.fillText(`📸 Báo ngập tại: ${streetLabel.slice(0, 45)}`, 50, 360);
+
+    ctx.fillStyle = '#38BDF8';
+    ctx.font = '16px monospace';
+    ctx.fillText(
+      `Mực nước: ${depth} • Thời gian: ${new Date().toLocaleTimeString('vi-VN')}`,
+      50,
+      395
+    );
+  }
+
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+  return {
+    dataUrl,
+    sizeKb: 28,
+    capturedIso: new Date().toISOString(),
   };
 }
 
@@ -174,118 +174,117 @@ export default function CrowdReportModal({
   deviceHash,
   onReportAccepted,
   defaultHotspotId,
+  userGpsLocation,
+  onRequestGps,
 }: CrowdReportModalProps) {
-  const [selectedHotspotId, setSelectedHotspotId] = useState<string>(
-    defaultHotspotId || FLOOD_HOTSPOTS_SEED[0].id
-  );
-  const [gpsTestMode, setGpsTestMode] = useState<GpsTestMode>('ON_SITE_VALID');
-  const [pinOffsetMeters, setPinOffsetMeters] = useState<number>(25); // Dịch chuyển ghim tâm ngập <= 500m (Walkthrough F3.2)
   const [selectedDepth, setSelectedDepth] = useState<VisualDepthChoice>('EXHAUST_30CM');
-
   const [photoDataUrl, setPhotoDataUrl] = useState<string>('');
-  const [photoSizeKb, setPhotoSizeKb] = useState<number>(24.5);
+  const [isPhotoUploaded, setIsPhotoUploaded] = useState<boolean>(false);
+  const [photoSizeKb, setPhotoSizeKb] = useState<number>(24);
   const [exifCapturedAt, setExifCapturedAt] = useState<string>(new Date().toISOString());
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submissionOutcome, setSubmissionOutcome] = useState<VerificationOutcome | null>(
-    null
-  );
+  const [submissionOutcome, setSubmissionOutcome] = useState<VerificationOutcome | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const currentHotspot: FloodHotspotSeed =
-    FLOOD_HOTSPOTS_SEED.find((h) => h.id === selectedHotspotId) || FLOOD_HOTSPOTS_SEED[0];
-
-  useEffect(() => {
-    if (defaultHotspotId) {
-      setSelectedHotspotId(defaultHotspotId);
+  // Tìm điểm ngập gần nhất theo GPS thực tế của người dùng
+  const nearestHotspotInfo = useMemo(() => {
+    if (!userGpsLocation) {
+      const fallback =
+        FLOOD_HOTSPOTS_SEED.find((h) => h.id === defaultHotspotId) || FLOOD_HOTSPOTS_SEED[0];
+      return { hotspot: fallback, distanceM: 0 };
     }
-  }, [defaultHotspotId]);
 
-  // Tự động khởi tạo ảnh hiện trường đã nén <150KB khi mở Modal hoặc đổi điểm/mức ngập
+    const [userLng, userLat] = userGpsLocation;
+    let closest: FloodHotspotSeed = FLOOD_HOTSPOTS_SEED[0];
+    let minDistance = Infinity;
+
+    for (const hs of FLOOD_HOTSPOTS_SEED) {
+      const dist = calculateDistanceMeters(
+        userLng,
+        userLat,
+        hs.point.coordinates[0],
+        hs.point.coordinates[1]
+      );
+      if (dist < minDistance) {
+        minDistance = dist;
+        closest = hs;
+      }
+    }
+
+    return {
+      hotspot: closest,
+      distanceM: Math.round(minDistance),
+    };
+  }, [userGpsLocation, defaultHotspotId]);
+
+  const activeHotspot = nearestHotspotInfo.hotspot;
+
+  // Khởi tạo ảnh placeholder khi mở modal nếu chưa có ảnh
   useEffect(() => {
     if (!isOpen) return;
     setSubmissionOutcome(null);
-    generateCompressedFieldPhotoWebp(currentHotspot.street_name, selectedDepth).then(
-      (res) => {
-        setPhotoDataUrl(res.dataUrl);
-        setPhotoSizeKb(res.sizeKb);
-        setExifCapturedAt(res.capturedIso);
-      }
-    );
-  }, [isOpen, currentHotspot.street_name, selectedDepth]);
+    if (!isPhotoUploaded) {
+      const initial = createDefaultPlaceholderPhoto(
+        activeHotspot.street_name,
+        selectedDepth
+      );
+      setPhotoDataUrl(initial.dataUrl);
+      setPhotoSizeKb(initial.sizeKb);
+      setExifCapturedAt(initial.capturedIso);
+    }
+  }, [isOpen, activeHotspot.street_name, selectedDepth, isPhotoUploaded]);
 
   if (!isOpen) return null;
 
-  // Tọa độ điểm ngập mục tiêu (target_gps)
-  const [targetLng, targetLat] = currentHotspot.point.coordinates;
-
-  // Tọa độ GPS của người gửi (user_gps) tùy theo chế độ kiểm thử:
-  // 1. ON_SITE_VALID: Đứng tại hiện trường cách tâm ngập `pinOffsetMeters` (15m..120m <= 500m)
-  // 2. SPAMMER_FAR_3KM: Giả lập kẻ xấu ngồi ở quán cà phê cách điểm ngập ~3.4km (> 500m)
-  const latDeltaValid = (pinOffsetMeters / 110600) * 0.8;
-  const lngDeltaValid = (pinOffsetMeters / 110600) * 0.6;
-
-  const userGps =
-    gpsTestMode === 'ON_SITE_VALID'
-      ? {
-          lat: Number((targetLat + latDeltaValid).toFixed(6)),
-          lng: Number((targetLng + lngDeltaValid).toFixed(6)),
-          accuracy_m: 14,
-        }
-      : {
-          // Cách ~3.4km về phía Quận 5 / Quận 1
-          lat: Number((targetLat - 0.0245).toFixed(6)),
-          lng: Number((targetLng - 0.0195).toFixed(6)),
-          accuracy_m: 18,
-        };
-
-  const calculatedDistanceM = calculateDistanceMeters(
-    userGps.lng,
-    userGps.lat,
-    targetLng,
-    targetLat
-  );
-  const isGeofenceValid = calculatedDistanceM <= 500;
-
-  // Xử lý khi người dùng chọn/chụp file ảnh thật từ máy
+  // Xử lý khi người dùng chụp ảnh từ camera hoặc chọn file ảnh
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const compressed = await generateCompressedFieldPhotoWebp(
-      currentHotspot.street_name,
-      selectedDepth,
-      file
-    );
-    setPhotoDataUrl(compressed.dataUrl);
-    setPhotoSizeKb(compressed.sizeKb);
-    // Đọc lastModified của file (nếu ảnh vừa chụp <= 10 phút thì lấy, hoặc gán thời gian chụp trực tiếp)
-    const fileTimeMs = file.lastModified || Date.now();
-    const ageMin = Math.abs(Date.now() - fileTimeMs) / 60000;
-    setExifCapturedAt(
-      ageMin <= 10 ? new Date(fileTimeMs).toISOString() : new Date().toISOString()
-    );
+    try {
+      const compressed = await compressImageToWebp(file);
+      setPhotoDataUrl(compressed.dataUrl);
+      setPhotoSizeKb(compressed.sizeKb);
+      setExifCapturedAt(compressed.capturedIso);
+      setIsPhotoUploaded(true);
+    } catch {
+      // fallback
+    }
   };
 
-  // Gửi báo cáo lên POST /api/reports (test trực tiếp cả trường hợp hợp lệ lẫn trường hợp bị chặn Geofence >500m)
+  // Gửi báo cáo ngập
   const handleSubmitReport = async () => {
+    if (!userGpsLocation) {
+      if (onRequestGps) onRequestGps();
+      return;
+    }
+
     setIsSubmitting(true);
     setSubmissionOutcome(null);
+
+    const [userLng, userLat] = userGpsLocation;
+    const [targetLng, targetLat] = activeHotspot.point.coordinates;
+
     try {
       const res = await fetch('/api/reports', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: selectedDepth === 'RECEDED_0CM' ? 'REPORT_RECEDED' : 'CREATE',
-          hotspot_id: currentHotspot.id,
-          device_hash: deviceHash || 'anon_reporter_hcm',
-          user_gps: userGps,
+          hotspot_id: activeHotspot.id,
+          device_hash: deviceHash || 'anon_hcm_user',
+          user_gps: {
+            lat: userLat,
+            lng: userLng,
+            accuracy_m: 12,
+          },
           target_gps: {
             lat: targetLat,
             lng: targetLng,
           },
-          address_text: `${currentHotspot.street_name}`,
-          district: currentHotspot.district,
+          address_text: activeHotspot.street_name,
+          district: activeHotspot.district,
           visual_depth_choice: selectedDepth,
           exif_captured_at: exifCapturedAt,
           photo_base64_webp: photoDataUrl,
@@ -295,14 +294,18 @@ export default function CrowdReportModal({
 
       const outcome = (await res.json()) as VerificationOutcome;
       setSubmissionOutcome(outcome);
+
       if (res.ok && outcome.accepted) {
         onReportAccepted();
+        setTimeout(() => {
+          onClose();
+        }, 1200);
       }
     } catch {
       setSubmissionOutcome({
         accepted: false,
         http_status: 422,
-        message: 'Lỗi kết nối mạng khi gửi báo cáo. Vui lòng thử lại.',
+        message: 'Lỗi kết nối. Vui lòng thử lại.',
         layers: [],
       });
     } finally {
@@ -312,24 +315,24 @@ export default function CrowdReportModal({
 
   return (
     <div
-      className="absolute inset-0 z-40 bg-slate-950/75 backdrop-blur-sm flex items-end justify-center p-0"
+      className="absolute inset-0 z-40 bg-slate-950/70 backdrop-blur-sm flex items-end justify-center p-0"
       role="dialog"
       aria-modal="true"
-      aria-label="Hộp thoại Báo ngập hiện trường kiểm soát 5 lớp"
+      aria-label="Chụp ảnh báo ngập tại hiện trường"
     >
-      <div className="w-full libre-glass rounded-t-sheet border-t border-slate-900/15 dark:border-white/20 shadow-[0_-16px_48px_rgba(0,0,0,0.6)] max-h-[92%] flex flex-col overflow-hidden">
-        {/* Header */}
-        <div className="px-3.5 py-2.5 border-b border-slate-200 dark:border-slate-800/90 flex items-center justify-between bg-gradient-to-r from-orange-600/15 to-red-600/15 shrink-0">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-orange-600 to-red-600 text-white flex items-center justify-center shadow-md shrink-0">
+      <div className="w-full bg-white dark:bg-slate-900 rounded-t-[32px] border-t border-slate-200 dark:border-slate-800 shadow-[0_-12px_40px_rgba(0,0,0,0.4)] max-h-[92%] flex flex-col overflow-hidden">
+        {/* Header mỏng gọn */}
+        <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-950 text-orange-600 dark:text-orange-400 flex items-center justify-center font-bold">
               <Camera className="w-4 h-4" />
             </div>
-            <div className="min-w-0">
-              <h2 className="text-sm font-extrabold text-slate-900 dark:text-white leading-tight truncate">
-                Báo Ngập Hiện Trường (Kiểm Soát 5 Lớp)
+            <div>
+              <h2 className="text-sm font-extrabold text-slate-900 dark:text-white leading-tight">
+                Chụp Ảnh Báo Ngập Tại Chỗ
               </h2>
-              <p className="text-[11px] text-slate-600 dark:text-slate-300 truncate">
-                Zero-Text-Input • Chạm chọn nhanh dưới mưa • Nén &lt;150KB
+              <p className="text-[11px] text-slate-500">
+                Xác thực tự động theo vị trí GPS của bạn
               </p>
             </div>
           </div>
@@ -337,108 +340,84 @@ export default function CrowdReportModal({
           <button
             type="button"
             onClick={onClose}
-            aria-label="Đóng hộp thoại báo ngập"
-            className="wet-touch-target -mr-1 rounded-xl bg-slate-200/80 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 flex items-center justify-center text-slate-700 dark:text-slate-200 transition shrink-0"
+            className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 flex items-center justify-center text-slate-600 dark:text-slate-300 transition"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Nội dung 3 Bước */}
-        <div className="p-3.5 overflow-y-auto space-y-3.5">
-          {/* BƯỚC 1: CHỤP ẢNH TRỰC TIẾP (<150KB) + GIẢ LẬP KIỂM THỬ GEOFENCE 500M */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between gap-1">
-              <span className="text-[11px] font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400">
-                Bước 1: Ảnh hiện trường &amp; Geofence ≤500m
-              </span>
-              <span className="metric-mono text-[10.5px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 shrink-0">
-                {photoSizeKb} KB (&lt;150KB)
-              </span>
-            </div>
-
-            {/* Bộ nút Giả lập nhanh cho Chủ dự án test cơ chế chặn Geofence 500m (Không lặp icon) */}
-            <div className="p-2.5 rounded-2xl bg-violet-500/10 dark:bg-violet-500/15 border border-violet-500/35 space-y-1.5">
-              <div className="text-[11px] font-bold text-violet-900 dark:text-violet-200 flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-violet-600 dark:text-violet-400 shrink-0" />
-                <span>Chế độ Kiểm thử Bảo mật GPS Geofence:</span>
+        {/* Nội dung chính: Tinh gọn vào 2 bước thực tế */}
+        <div className="p-4 overflow-y-auto space-y-4">
+          {/* Card định vị GPS hiện tại */}
+          <div className="p-3 rounded-2xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200/80 dark:border-blue-900 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-full bg-[#1A73E8] text-white flex items-center justify-center shrink-0">
+                <MapPin className="w-4 h-4" />
               </div>
-              <div className="grid grid-cols-2 gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => setGpsTestMode('ON_SITE_VALID')}
-                  className={`min-h-[42px] px-2.5 py-1.5 rounded-xl text-[11px] font-bold border text-left flex items-center gap-1.5 transition ${
-                    gpsTestMode === 'ON_SITE_VALID'
-                      ? 'bg-emerald-600 text-white border-emerald-400 shadow-sm'
-                      : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-white/10'
-                  }`}
-                >
-                  <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                  <span className="leading-tight">Tại hiện trường (≤500m)</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setGpsTestMode('SPAMMER_FAR_3KM')}
-                  className={`min-h-[42px] px-2.5 py-1.5 rounded-xl text-[11px] font-bold border text-left flex items-center gap-1.5 transition ${
-                    gpsTestMode === 'SPAMMER_FAR_3KM'
-                      ? 'bg-red-600 text-white border-red-400 shadow-sm'
-                      : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-white/10'
-                  }`}
-                >
-                  <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
-                  <span className="leading-tight">Kẻ xấu ở xa (&gt;3km - Chặn)</span>
-                </button>
+              <div className="min-w-0">
+                <div className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">
+                  Vị trí GPS của bạn:
+                </div>
+                <div className="text-xs font-extrabold text-slate-900 dark:text-white truncate">
+                  {userGpsLocation ? (
+                    <>
+                      {activeHotspot.street_name.split('(')[0]} ({activeHotspot.district})
+                    </>
+                  ) : (
+                    <span className="text-amber-600 dark:text-amber-400">
+                      Chưa định vị GPS
+                    </span>
+                  )}
+                </div>
+                {userGpsLocation && (
+                  <div className="text-[10px] text-slate-500 font-mono">
+                    Cách điểm ngập: ~{nearestHotspotInfo.distanceM}m
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Khung hiển thị ảnh chụp hiện trường 16:9 kèm 2 Huy hiệu Lớp 1 & Lớp 2 */}
-            <div className="relative rounded-2xl overflow-hidden border border-slate-300 dark:border-slate-700 bg-slate-900 h-40">
+            {!userGpsLocation && (
+              <button
+                type="button"
+                onClick={onRequestGps}
+                className="px-3 py-1.5 rounded-full bg-[#1A73E8] hover:bg-blue-600 text-white font-bold text-xs shrink-0 flex items-center gap-1 shadow-sm transition"
+              >
+                <Navigation className="w-3.5 h-3.5" />
+                <span>Bật GPS</span>
+              </button>
+            )}
+          </div>
+
+          {/* BƯỚC 1: ẢNH CHỤP HIỆN TRƯỜNG */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-xs font-extrabold text-slate-900 dark:text-white">
+              <span>1. Ảnh chụp hiện trường</span>
+              {isPhotoUploaded && (
+                <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3" /> Đã tải ảnh ({photoSizeKb}KB)
+                </span>
+              )}
+            </div>
+
+            <div className="relative rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-950 h-44 shadow-inner">
               {photoDataUrl && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={photoDataUrl}
-                  alt="Ảnh chụp hiện trường ngập"
+                  alt="Hiện trường ngập nước"
                   className="w-full h-full object-cover"
                 />
               )}
 
-              {/* Huy hiệu Lớp 1 (GPS <= 500m) & Lớp 2 (EXIF <= 10 phút) đè trên ảnh (1 icon/dòng) */}
-              <div className="absolute top-2 inset-x-2 flex flex-col gap-1">
-                <div
-                  className={`px-2.5 py-1 rounded-xl text-[11px] font-bold backdrop-blur-md flex items-center gap-1.5 shadow ${
-                    isGeofenceValid
-                      ? 'bg-emerald-950/85 text-emerald-300 border border-emerald-400/50'
-                      : 'bg-red-950/90 text-red-200 border border-red-400/60'
-                  }`}
-                >
-                  {isGeofenceValid ? (
-                    <>
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                      <span className="truncate">
-                        Lớp 1–2 (Geofence): Cách tâm ngập {calculatedDistanceM}m (≤500m)
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <XCircle className="w-3.5 h-3.5 text-red-400 shrink-0" />
-                      <span className="truncate">
-                        Vi phạm Geofence: Cách {(calculatedDistanceM / 1000).toFixed(2)}km (&gt;500m)
-                      </span>
-                    </>
-                  )}
-                </div>
-
-                <div className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-slate-900/85 text-sky-300 border border-sky-400/40 backdrop-blur-md flex items-center gap-1.5 w-fit">
-                  <Camera className="w-3.5 h-3.5 shrink-0" />
-                  <span>
-                    Lớp 3 (EXIF &amp; WebP): Vừa chụp (≤10p) • {photoSizeKb}KB
-                  </span>
-                </div>
+              {/* Nhãn giờ chụp nổi trên ảnh */}
+              <div className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-full bg-black/70 backdrop-blur-md text-white font-mono font-bold text-[10px] flex items-center gap-1">
+                <span>🕒 {new Date(exifCapturedAt).toLocaleTimeString('vi-VN')}</span>
+                <span className="text-emerald-400">• GPS chuẩn</span>
               </div>
 
-              {/* Nút mở Camera thật / tải ảnh khác */}
-              <div className="absolute bottom-2 right-2 flex items-center gap-2">
+              {/* Nút bấm chụp ảnh lớn */}
+              <div className="absolute bottom-2.5 inset-x-2.5 flex items-center gap-2">
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -450,39 +429,48 @@ export default function CrowdReportModal({
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="px-2.5 py-1.5 rounded-xl bg-white/95 hover:bg-white text-slate-900 font-bold text-[11px] shadow-lg flex items-center gap-1.5"
+                  className="flex-1 py-2 px-3 rounded-xl bg-white/95 hover:bg-white text-slate-900 font-extrabold text-xs shadow-lg flex items-center justify-center gap-1.5 transition active:scale-[0.98]"
+                >
+                  <Camera className="w-4 h-4 text-orange-600" />
+                  <span>{isPhotoUploaded ? 'Chụp lại ảnh khác' : 'Chụp ảnh bằng Camera'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="py-2 px-3 rounded-xl bg-slate-900/80 hover:bg-slate-900 text-white font-bold text-xs backdrop-blur-md shadow-lg flex items-center gap-1"
                 >
                   <Upload className="w-3.5 h-3.5" />
-                  <span>Chụp / Tải ảnh</span>
+                  <span>Tải ảnh</span>
                 </button>
               </div>
             </div>
           </div>
 
-          {/* BƯỚC 2: 4 NÚT CHỌN NHANH MỨC NGẬP CỰC LỚN (2X2 CÂN ĐỐI TRONG KHUNG 430PX) */}
+          {/* BƯỚC 2: CHỌN MỨC NGẬP THỰC TẾ (4 NÚT TO RÕ DỄ CHẠM) */}
           <div className="space-y-1.5">
-            <span className="text-[11px] font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400 block">
-              Bước 2: Chọn mức ngập theo bộ phận xe (Vùng chạm ≥68px)
-            </span>
+            <div className="text-xs font-extrabold text-slate-900 dark:text-white">
+              2. Chọn mức nước thực tế bạn thấy:
+            </div>
 
             <div className="grid grid-cols-2 gap-2">
-              {DEPTH_BUTTONS.map((btn) => {
-                const isSelected = selectedDepth === btn.value;
+              {DEPTH_OPTIONS.map((opt) => {
+                const isSelected = selectedDepth === opt.value;
                 return (
                   <button
-                    key={btn.value}
+                    key={opt.value}
                     type="button"
-                    onClick={() => setSelectedDepth(btn.value)}
-                    aria-pressed={isSelected}
-                    className={`min-h-[68px] p-2.5 rounded-2xl border-2 text-left transition-all flex flex-col justify-center ${
-                      isSelected ? btn.activeClass : btn.defaultClass
+                    onClick={() => setSelectedDepth(opt.value)}
+                    className={`min-h-[64px] p-2.5 rounded-2xl border text-left transition-all flex flex-col justify-between ${
+                      isSelected
+                        ? opt.activeClass
+                        : 'bg-slate-50 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 hover:border-slate-300'
                     }`}
                   >
                     <div className="text-xs font-extrabold leading-snug">
-                      {btn.title}
+                      {opt.title}
                     </div>
-                    <div className="text-[10.5px] opacity-85 font-medium mt-0.5 leading-tight">
-                      {btn.subtitle}
+                    <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium leading-tight mt-1">
+                      {opt.subtitle}
                     </div>
                   </button>
                 );
@@ -490,118 +478,52 @@ export default function CrowdReportModal({
             </div>
           </div>
 
-          {/* BƯỚC 3: ĐỊA CHỈ TỰ ĐỘNG TỪ GPS, DỊCH CHUYỂN GHIM <=500M & GỬI 1 CHẠM */}
-          <div className="space-y-2.5">
-            <span className="text-[11px] font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400 block">
-              Bước 3: Vị trí tự động &amp; Gửi 1 chạm
-            </span>
-
-            <div className="p-3 rounded-2xl bg-slate-100 dark:bg-slate-900/90 border border-slate-200 dark:border-white/10 space-y-2">
-              <div className="flex items-center gap-1.5">
-                <MapPin className="w-3.5 h-3.5 text-red-500 shrink-0" />
-                <span className="text-[11.5px] font-bold text-slate-700 dark:text-slate-300">
-                  Tuyến đường ngập đang đứng gần nhất:
-                </span>
-              </div>
-
-              <select
-                aria-label="Chọn tuyến đường điểm ngập tại hiện trường"
-                value={selectedHotspotId}
-                onChange={(e) => setSelectedHotspotId(e.target.value)}
-                className="wet-touch-target w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-white/10 text-xs font-bold text-slate-900 dark:text-white"
-              >
-                {FLOOD_HOTSPOTS_SEED.map((hs) => (
-                  <option key={hs.id} value={hs.id}>
-                    {hs.district} — {hs.street_name}
-                  </option>
-                ))}
-              </select>
-
-              {/* Thanh trượt kéo nhẹ ghim tâm ngập dưới lòng đường khi đứng trên vỉa hè (Walkthrough F3.2) */}
-              {gpsTestMode === 'ON_SITE_VALID' && (
-                <div className="pt-1 flex items-center justify-between gap-2 text-[11.5px]">
-                  <span className="text-slate-600 dark:text-slate-400 font-medium">
-                    Tinh chỉnh ghim từ vỉa hè ra lòng đường:
-                  </span>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <input
-                      type="range"
-                      min={10}
-                      max={150}
-                      step={5}
-                      value={pinOffsetMeters}
-                      onChange={(e) => setPinOffsetMeters(Number(e.target.value))}
-                      className="w-20 accent-blue-600"
-                    />
-                    <span className="metric-mono font-bold text-blue-600 dark:text-blue-400 w-10 text-right">
-                      {pinOffsetMeters}m
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* Chú thích Lớp 3-5 bằng ngôn ngữ đời thường dễ hiểu (Walkthrough F3.3) */}
-              <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed pt-1.5 border-t border-slate-200 dark:border-white/10">
-                <strong>Cơ chế cộng đồng (Lớp 4–5):</strong> Báo cáo hiện ngay trên bản đồ, gắn nhãn{' '}
-                <strong>&ldquo;Đã xác minh ✓&rdquo;</strong> khi đủ 3 người quanh 150m cùng xác nhận
-                và tự hạ cấp sau 90 phút nếu nước rút.
-              </p>
-            </div>
-
-            {/* Hiển thị kết quả kiểm duyệt 5 lớp sau khi bấm gửi */}
-            {submissionOutcome && (
-              <div
-                className={`p-3 rounded-2xl border-2 space-y-2 ${
-                  submissionOutcome.accepted
-                    ? 'bg-emerald-500/15 border-emerald-500 text-emerald-950 dark:text-emerald-100'
-                    : 'bg-red-500/15 border-red-500 text-red-950 dark:text-red-100'
-                }`}
-              >
-                <div className="font-extrabold text-xs flex items-center gap-2">
-                  {submissionOutcome.accepted ? (
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                  ) : (
-                    <ShieldAlert className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0" />
-                  )}
-                  <span>{submissionOutcome.message}</span>
-                </div>
-
-                {submissionOutcome.layers.length > 0 && (
-                  <div className="space-y-1 text-[11px] bg-white/80 dark:bg-slate-900/80 p-2 rounded-xl">
-                    {submissionOutcome.layers.map((layer: VerificationLayerCheck) => (
-                      <div key={layer.layer} className="flex items-start gap-1.5">
-                        <span className="font-bold shrink-0">
-                          {layer.passed ? '✓' : '✕'} Lớp {layer.layer} ({layer.name}):
-                        </span>
-                        <span className="text-slate-700 dark:text-slate-300">{layer.detail}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Nút Gửi 1 chạm (cao >= 56px chuẩn tay ướt, không lặp icon) */}
-            <button
-              type="button"
-              disabled={isSubmitting}
-              onClick={handleSubmitReport}
-              className={`wet-cta-target w-full px-4 py-3 rounded-2xl font-extrabold text-sm text-white shadow-xl flex items-center justify-center gap-2 transition active:scale-[0.99] ${
-                isGeofenceValid
-                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500'
-                  : 'bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500'
+          {/* Thông báo kết quả gửi */}
+          {submissionOutcome && (
+            <div
+              className={`p-3 rounded-2xl border text-xs font-bold flex items-center gap-2 ${
+                submissionOutcome.accepted
+                  ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500 text-emerald-800 dark:text-emerald-200'
+                  : 'bg-red-50 dark:bg-red-950/40 border-red-500 text-red-800 dark:text-red-200'
               }`}
             >
-              <Send className="w-4 h-4 shrink-0" />
-              <span>
-                {isSubmitting
-                  ? 'Đang kiểm duyệt 5 lớp...'
-                  : isGeofenceValid
-                    ? 'GỬI BÁO CÁO NGẬP NGAY (1 CHẠM)'
-                    : 'THỬ GỬI BÁO CÁO TỪ XA (>3KM) — XEM CHẶN GEOFENCE'}
-              </span>
-            </button>
-          </div>
+              {submissionOutcome.accepted ? (
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              ) : (
+                <X className="w-4 h-4 text-red-600 shrink-0" />
+              )}
+              <span>{submissionOutcome.message}</span>
+            </div>
+          )}
+
+          {/* NÚT GỬI BÁO CÁO 1 CHẠM DUY NHẤT */}
+          <button
+            type="button"
+            disabled={isSubmitting || !userGpsLocation}
+            onClick={handleSubmitReport}
+            className={`w-full py-3.5 px-4 rounded-2xl font-extrabold text-sm text-white shadow-lg flex items-center justify-center gap-2 transition active:scale-[0.99] ${
+              !userGpsLocation
+                ? 'bg-slate-400 cursor-not-allowed'
+                : 'bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 shadow-orange-500/25'
+            }`}
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Đang gửi báo cáo lên bản đồ...</span>
+              </>
+            ) : !userGpsLocation ? (
+              <>
+                <MapPin className="w-4 h-4" />
+                <span>Vui lòng bật GPS để gửi báo cáo</span>
+              </>
+            ) : (
+              <>
+                <Send className="w-4 h-4" />
+                <span>Gửi Báo Cáo Ngập Ngay</span>
+              </>
+            )}
+          </button>
         </div>
       </div>
     </div>

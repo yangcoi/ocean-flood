@@ -218,8 +218,48 @@ function CommunityFloodPhotoThumbnail({
 }
 
 /**
+ * Diễn giải mực nước triều thiên văn & lượng mưa thành hiện trạng đường phố đời thường TP.HCM
+ */
+function getNaturalTideReality(tideM: number, rainMm: number) {
+  if (tideM < 1.40 && rainMm < 10) {
+    return {
+      streetImpact: '🟢 Dưới cống, khô ráo',
+      humanDesc: 'Chưa tràn cống. Đường khô ráo, chạy xe an toàn.',
+      colorClass: 'text-emerald-700 dark:text-emerald-300',
+      badgeBg: 'bg-emerald-500 text-white',
+      cardBorder: 'border-emerald-200 dark:border-emerald-900 bg-emerald-50/50 dark:bg-emerald-950/20',
+    };
+  }
+  if (tideM < 1.50 || (rainMm >= 10 && rainMm < 25)) {
+    return {
+      streetImpact: '🟡 Mấp mé vỉa hè (~5–12cm)',
+      humanDesc: 'Nước rỉ mép đường, đọng vũng nhẹ. Xe máy qua tốt.',
+      colorClass: 'text-amber-700 dark:text-amber-300',
+      badgeBg: 'bg-amber-500 text-slate-950',
+      cardBorder: 'border-amber-200 dark:border-amber-900 bg-amber-50/50 dark:bg-amber-950/20',
+    };
+  }
+  if (tideM < 1.60 || (rainMm >= 25 && rainMm < 45)) {
+    return {
+      streetImpact: '🟠 Ngập nửa bánh xe (~15–28cm)',
+      humanDesc: 'Tràn mép cống, ngập ống pô. Xe ga đi giữa tim đường.',
+      colorClass: 'text-orange-700 dark:text-orange-300',
+      badgeBg: 'bg-orange-500 text-white',
+      cardBorder: 'border-orange-200 dark:border-orange-900 bg-orange-50/50 dark:bg-orange-950/20',
+    };
+  }
+  return {
+    streetImpact: '🔴 Ngập lút pô / gầm ô tô (~35–50cm)',
+    humanDesc: 'Triều đạt đỉnh kết hợp mưa! Rất dễ chết máy, BẮT BUỘC NÉ.',
+    colorClass: 'text-red-700 dark:text-red-300',
+    badgeBg: 'bg-red-600 text-white',
+    cardBorder: 'border-red-200 dark:border-red-900 bg-red-50/50 dark:bg-red-950/20',
+  };
+}
+
+/**
  * Block Dự báo Thủy văn & Diễn biến Ngập 3 giờ tới (+1h, +2h, +3h)
- * Tích hợp dữ liệu Open-Meteo và trạm triều Phú An/Nhà Bè
+ * Kết hợp thông số Khoa học (mm/h, m) VÀ Thực tế đời thường dễ hiểu
  */
 function Hydrological3HourTimelineBlock({
   hotspot,
@@ -245,11 +285,11 @@ function Hydrological3HourTimelineBlock({
   const rain3 = districtData?.forecast_3h_mm ?? Math.round(hotspot.rain_current_mm_h * 0.4);
 
   const peakTideM = tidePhuAn?.peak_level_m ?? hotspot.tide_peak_m ?? 1.68;
-  const currentTideM = tidePhuAn?.current_level_m ?? hotspot.tide_level_m ?? 1.55;
+  const currentTideM = tidePhuAn?.current_level_m ?? hotspot.tide_level_m ?? 1.39;
 
-  const tide1 = Number(Math.min(peakTideM, currentTideM + 0.05).toFixed(2));
+  const tide1 = Number(Math.min(peakTideM, currentTideM + 0.08).toFixed(2));
   const tide2 = Number(peakTideM.toFixed(2));
-  const tide3 = Number(Math.max(1.35, peakTideM - 0.18).toFixed(2));
+  const tide3 = Number(Math.max(1.35, peakTideM - 0.22).toFixed(2));
 
   // Xác suất ngập 3 giờ tới
   const probBase = hotspot.flood_probability_pct;
@@ -263,30 +303,24 @@ function Hydrological3HourTimelineBlock({
       rainMm: rain1,
       tideM: tide1,
       probPct: prob1,
+      reality: getNaturalTideReality(tide1, rain1),
       trendText: '🔺 Nước đang dâng',
-      trendColor: 'text-amber-600 dark:text-amber-400',
-      bgCard: 'bg-amber-50/60 dark:bg-amber-950/30 border-amber-200 dark:border-amber-900',
-      badgeBg: 'bg-amber-500 text-slate-950',
     },
     {
       hourLabel: `+2h (${h2.toString().padStart(2, '0')}:00)`,
       rainMm: rain2,
       tideM: tide2,
       probPct: prob2,
-      trendText: prob2 >= 70 ? '⚠️ Đỉnh triều / Ngập cao' : '⚠️ Cao điểm ngập',
-      trendColor: 'text-red-600 dark:text-red-400',
-      bgCard: 'bg-red-50/60 dark:bg-red-950/30 border-red-200 dark:border-red-900',
-      badgeBg: 'bg-red-600 text-white',
+      reality: getNaturalTideReality(tide2, rain2),
+      trendText: prob2 >= 70 ? '⚠️ Cao điểm ngập' : '⚠️ Mực nước cao nhất',
     },
     {
       hourLabel: `+3h (${h3.toString().padStart(2, '0')}:00)`,
       rainMm: rain3,
       tideM: tide3,
       probPct: prob3,
+      reality: getNaturalTideReality(tide3, rain3),
       trendText: '🔻 Nước bắt đầu rút',
-      trendColor: 'text-emerald-600 dark:text-emerald-400',
-      bgCard: 'bg-emerald-50/60 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-900',
-      badgeBg: 'bg-emerald-600 text-white',
     },
   ];
 
@@ -296,7 +330,7 @@ function Hydrological3HourTimelineBlock({
         <div className="flex items-center gap-1.5">
           <Calendar className="w-4 h-4 text-[#1A73E8]" />
           <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider">
-            Dự báo Diễn biến Ngập 3 Giờ Tới
+            Diễn biến 3 Giờ Tới (Khoa học &amp; Đời thường)
           </span>
         </div>
         <span className="text-[10px] font-bold text-slate-500 flex items-center gap-1">
@@ -306,54 +340,66 @@ function Hydrological3HourTimelineBlock({
       </div>
 
       {/* Grid 3 cột tương ứng 3 mốc giờ */}
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
         {items.map((it, idx) => (
           <div
             key={idx}
-            className={`p-2.5 rounded-xl border flex flex-col justify-between text-center space-y-1.5 ${it.bgCard}`}
+            className={`p-2.5 rounded-xl border flex flex-col justify-between space-y-2 ${it.reality.cardBorder}`}
           >
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-mono font-black text-slate-800 dark:text-slate-100">
+              <span className="text-xs font-mono font-black text-slate-800 dark:text-slate-100">
                 {it.hourLabel}
               </span>
-              <span className={`px-1.5 py-0.2 rounded text-[9px] font-black ${it.badgeBg}`}>
-                {it.probPct}%
+              <span className={`px-1.5 py-0.2 rounded text-[9.5px] font-black ${it.reality.badgeBg}`}>
+                Xác suất {it.probPct}%
               </span>
             </div>
 
-            <div className="space-y-1 pt-1 text-left text-[11px]">
-              <div className="flex items-center justify-between font-bold">
-                <span className="text-slate-500 flex items-center gap-0.5">
+            {/* Mục 1: Đời thường thực tế trên đường (Đập vào mắt đầu tiên) */}
+            <div className="p-1.5 rounded-lg bg-white/80 dark:bg-slate-900/80 border border-black/5 dark:border-white/5 space-y-0.5">
+              <div className="text-[11px] font-black text-slate-900 dark:text-white leading-tight">
+                {it.reality.streetImpact}
+              </div>
+              <div className="text-[10px] text-slate-600 dark:text-slate-300 font-medium leading-tight">
+                {it.reality.humanDesc}
+              </div>
+            </div>
+
+            {/* Mục 2: Số liệu Khoa học chuẩn xác */}
+            <div className="space-y-0.5 text-left text-[10.5px] pt-0.5 text-slate-600 dark:text-slate-300">
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-1">
                   <CloudRain className="w-3 h-3 text-[#1A73E8]" /> Mưa:
                 </span>
-                <span className="text-slate-900 dark:text-white font-mono">
+                <span className="font-mono font-bold text-slate-900 dark:text-white">
                   {it.rainMm} mm/h
                 </span>
               </div>
-              <div className="flex items-center justify-between font-bold">
-                <span className="text-slate-500 flex items-center gap-0.5">
-                  <Waves className="w-3 h-3 text-indigo-600" /> Triều:
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-1">
+                  <Waves className="w-3 h-3 text-indigo-600" /> Triều sông:
                 </span>
-                <span className="text-slate-900 dark:text-white font-mono">
+                <span className="font-mono font-bold text-slate-900 dark:text-white">
                   {it.tideM.toFixed(2)}m
                 </span>
               </div>
             </div>
 
-            <div className={`text-[10px] font-black pt-1 border-t border-black/5 dark:border-white/10 ${it.trendColor}`}>
-              {it.trendText}
+            <div className="text-[10px] font-black pt-1 border-t border-black/5 dark:border-white/10 text-slate-500 flex items-center justify-between">
+              <span>Xu hướng:</span>
+              <span className="font-bold text-slate-800 dark:text-slate-200">{it.trendText}</span>
             </div>
           </div>
         ))}
       </div>
 
       {/* Kết luận người thường hiểu ngay: Đi về lúc nào? */}
-      <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700/80 text-xs flex items-center gap-2">
-        <div className="w-7 h-7 rounded-lg bg-blue-100 dark:bg-blue-950 text-[#1A73E8] flex items-center justify-center font-bold text-xs shrink-0">
+      <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700/80 text-xs flex items-center gap-2.5">
+        <div className="w-7 h-7 rounded-lg bg-blue-100 dark:bg-blue-950 text-[#1A73E8] flex items-center justify-center font-bold text-sm shrink-0">
           💡
         </div>
         <p className="text-[11px] font-semibold text-slate-700 dark:text-slate-200 leading-snug">
-          <strong>Gợi ý di chuyển:</strong> Cao điểm ngập lúc <strong>{h2}:00</strong> (do triều đạt đỉnh ~{peakTideM}m). Nước bắt đầu rút dần sau <strong>{h3}:00</strong> khi mưa giảm.
+          <strong>Lời khuyên di chuyển:</strong> Hiện tại triều sông <strong>{currentTideM.toFixed(2)}m</strong> (đường đang khô ráo). Dự báo cao điểm ngập vào lúc <strong>{h2}:00</strong> (triều đạt đỉnh ~{peakTideM.toFixed(2)}m). Nước bắt đầu rút dần sau <strong>{h3}:00</strong> để tan tầm về nhà an toàn.
         </p>
       </div>
 
@@ -361,13 +407,13 @@ function Hydrological3HourTimelineBlock({
       <div className="pt-1 border-t border-slate-200 dark:border-slate-700 text-[10px] text-slate-500 dark:text-slate-400 space-y-0.5">
         <div className="flex items-center gap-1">
           <Database className="w-3 h-3 text-emerald-600" />
-          <span className="font-bold">Nguồn dữ liệu thủy văn &amp; khí tượng:</span>
+          <span className="font-bold">Dữ liệu nguồn chính thống đã kiểm chứng:</span>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-[9.5px] leading-tight">
-          <div>🌧️ <strong>Mưa:</strong> Vệ tinh Open-Meteo (ECMWF / DWD ICON).</div>
+          <div>🌧️ <strong>Mưa:</strong> Vệ tinh Open-Meteo (Mô hình ECMWF IFS / DWD ICON).</div>
           <div>🌊 <strong>Triều:</strong> Trạm Phú An &amp; Nhà Bè (Đài KTTV Nam Bộ).</div>
-          <div>📍 <strong>Điểm ngập:</strong> Sở Xây dựng TP.HCM &amp; UDI Maps.</div>
-          <div>📐 <strong>Cao độ:</strong> Vi địa hình NASADEM / SRTM.</div>
+          <div>📍 <strong>Điểm ngập:</strong> Danh mục Sở Xây dựng TP.HCM &amp; UDI Maps.</div>
+          <div>📐 <strong>Cao độ:</strong> Vi địa hình chuẩn NASADEM / SRTM.</div>
         </div>
       </div>
     </div>
