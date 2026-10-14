@@ -92,7 +92,7 @@ export default function MapCanvas({
       else if (p.severity_level === 2) colorHex = '#EA580C';
       else if (p.severity_level === 1) colorHex = '#D97706';
 
-      const isVerified = p.verification_status === 'VERIFIED' || p.confirm_count >= 3;
+      const isVerified = p.verification_status === 'VERIFIED' || p.confirm_count >= 1;
 
       const polyFeature: GeoJSON.Feature = {
         type: 'Feature',
@@ -673,36 +673,62 @@ export default function MapCanvas({
     }
 
     // CHẾ ĐỘ XEM BẢN ĐỒ BÌNH THƯỜNG (Tối giản, không đè chữ):
-    // 1. Render các điểm ngập
+    // 1. Render các điểm ngập: Phân biệt rõ RÀNG giữa 🔮 DỰ BÁO TOÁN HỌC vs 🚨 ĐÃ XÁC THỰC THỰC TẾ
     features.forEach((f) => {
       const p = f.properties;
+      const isVerified = p.verification_status === 'VERIFIED' || p.confirm_count >= 1;
       const isSelected = selectedHotspot?.hotspot_id === p.hotspot_id;
 
       let pillBg = 'bg-emerald-600 text-white';
-      if (p.severity_level === 3) {
-        pillBg = 'bg-red-600 text-white';
-      } else if (p.severity_level === 2) {
-        pillBg = 'bg-orange-500 text-white';
-      } else if (p.severity_level === 1) {
-        pillBg = 'bg-amber-500 text-slate-950';
+      let borderStyle = 'border-2 border-white shadow-md';
+      let statusIcon = '🔮';
+      let statusBadgeText = 'Dự kiến';
+
+      if (isVerified) {
+        statusIcon = '🚨';
+        statusBadgeText = p.confirm_count > 0 ? `${p.confirm_count} báo` : 'Đã báo';
+        borderStyle = 'border-2 border-white shadow-[0_0_12px_rgba(239,68,68,0.65)] ring-1 ring-red-400';
+        if (p.severity_level === 3) {
+          pillBg = 'bg-red-600 text-white';
+        } else if (p.severity_level === 2) {
+          pillBg = 'bg-orange-500 text-white';
+        } else if (p.severity_level === 1) {
+          pillBg = 'bg-amber-500 text-slate-950';
+        }
+      } else {
+        // Dự báo từ mô hình toán học (Open-Meteo & Đỉnh triều) - Chưa có người dân tại chỗ xác thực
+        statusIcon = '🔮';
+        statusBadgeText = 'Dự kiến';
+        borderStyle = 'border-2 border-dashed border-amber-300 dark:border-amber-400 shadow-sm';
+        if (p.severity_level === 3) {
+          pillBg = 'bg-red-500/90 text-white';
+        } else if (p.severity_level === 2) {
+          pillBg = 'bg-orange-500/90 text-white';
+        } else if (p.severity_level === 1) {
+          pillBg = 'bg-amber-400/95 text-slate-950';
+        }
       }
 
       const shortStreet = p.street_name.split('(')[0].replace('Đường ', '').trim();
 
       const el = document.createElement('button');
       el.type = 'button';
-      el.setAttribute('aria-label', `Điểm ngập ${p.street_name}`);
-      el.className = 'min-w-[38px] min-h-[38px] flex items-center justify-center focus:outline-none group';
+      el.setAttribute(
+        'aria-label',
+        `${isVerified ? 'Đã xác thực thực tế' : 'Dự kiến mô hình'} ngập ${p.street_name}`
+      );
+      el.className = 'min-w-[42px] min-h-[42px] flex items-center justify-center focus:outline-none group';
 
       el.innerHTML = `
-        <div class="px-2 py-0.5 rounded-full shadow-md font-extrabold text-[11px] flex items-center gap-1 border-2 border-white transition-transform group-hover:scale-110 ${pillBg} ${
+        <div class="px-2 py-0.5 rounded-full font-extrabold text-[11px] flex items-center gap-1 transition-transform group-hover:scale-110 ${pillBg} ${borderStyle} ${
           isSelected ? 'ring-4 ring-blue-500 scale-125 z-30' : ''
         }">
+          <span class="text-[10px] leading-none">${statusIcon}</span>
           <span>${p.estimated_depth_cm}cm</span>
           ${
             isDetailedZoom || isSelected
-              ? `<span class="max-w-[75px] truncate text-[10px] font-semibold pl-1 border-l border-white/30">${shortStreet}</span>`
-              : ''
+              ? `<span class="max-w-[75px] truncate text-[9.5px] font-semibold pl-1 border-l border-white/30">${shortStreet}</span>`
+              : `<span class="text-[9px] font-semibold opacity-90 pl-0.5 border-l border-white/25">${statusBadgeText}</span>`
           }
         </div>
       `;
@@ -898,21 +924,45 @@ export default function MapCanvas({
       {showLegend && (
         <div
           role="region"
-          className="absolute inset-x-3 bottom-24 z-25 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-2xl border border-slate-200 dark:border-slate-700 shadow-xl p-3.5 text-xs space-y-2"
+          className="absolute inset-x-3 bottom-24 z-25 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-2xl border border-slate-200 dark:border-slate-700 shadow-xl p-3.5 text-xs space-y-2.5 max-w-sm mx-auto"
         >
           <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
             <span className="font-bold text-slate-900 dark:text-white">
-              Chú giải mức độ ngập trên bản đồ
+              Chú giải bản đồ ngập lụt TP.HCM
             </span>
             <button
               type="button"
               onClick={onCloseLegend}
-              className="text-slate-500 hover:text-slate-800 font-semibold"
+              className="text-slate-500 hover:text-slate-800 dark:hover:text-white font-semibold"
             >
               Đóng ✕
             </button>
           </div>
-          <div className="grid grid-cols-2 gap-2 text-[11px]">
+
+          {/* Phân định rõ ràng: Dự báo mô hình vs Xác thực thực tế */}
+          <div className="p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-[11px] space-y-1.5">
+            <div className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1">
+              <span>Trạng thái kiểm chứng nghiệp vụ:</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="px-1.5 py-0.5 rounded-full bg-red-600 text-white font-bold text-[10px] border border-white shrink-0">
+                🚨 Đã báo
+              </span>
+              <span className="text-slate-700 dark:text-slate-200">
+                <strong>Đã xác thực thực tế:</strong> Người dân tại chỗ đã gửi ảnh / báo ngập thật.
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="px-1.5 py-0.5 rounded-full bg-amber-400 text-slate-950 font-bold text-[10px] border border-dashed border-amber-600 shrink-0">
+                🔮 Dự kiến
+              </span>
+              <span className="text-slate-700 dark:text-slate-200">
+                <strong>Dự báo mô hình (Chưa xác thực):</strong> Tính từ mưa Open-Meteo &amp; Triều Phú An.
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 text-[11px] pt-1 border-t border-slate-100 dark:border-slate-800">
             <div className="flex items-center gap-2">
               <span className="w-3 h-3 rounded-full bg-red-600 shrink-0" />
               <span className="text-slate-700 dark:text-slate-200">

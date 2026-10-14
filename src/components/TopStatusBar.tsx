@@ -36,6 +36,8 @@ export interface TopStatusBarProps {
   tideNhaBe: TideStationStatus | null;
   districtRainfall: Record<HcmMvpDistrict, DistrictRainForecast> | null;
   highRiskCount: number;
+  verifiedCount?: number;
+  forecastOnlyCount?: number;
   isLoading: boolean;
   onOpenRoutePlanner?: () => void;
 }
@@ -92,6 +94,8 @@ export default function TopStatusBar({
   tideNhaBe,
   districtRainfall,
   weatherSourceLabel,
+  verifiedCount,
+  forecastOnlyCount,
   onOpenRoutePlanner,
 }: TopStatusBarProps) {
   const [showTimelineModal, setShowTimelineModal] = useState(false);
@@ -188,25 +192,28 @@ export default function TopStatusBar({
       {/* HÀNG 3: BANNER DỰ KIẾN NGẬP • KHUNG GIỜ • KHẢ NĂNG • MƯA HIỂN THỊ TRỰC QUAN */}
       <div className="pointer-events-auto px-3 py-1.5 rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shadow-md border border-slate-200/90 dark:border-slate-700 text-xs flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 min-w-0">
-          <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse shrink-0" />
-          <div className="min-w-0 truncate text-[11px] font-black text-slate-800 dark:text-slate-100">
-            <span>Dự kiến ngập: </span>
-            <span className="text-[#1A73E8]">17:00 – 19:00</span>
-            <span className="text-slate-400"> • </span>
-            <span>Khả năng: </span>
-            <span className="text-red-600 dark:text-red-400 font-mono">85%</span>
-            <span className="text-slate-400"> • </span>
-            <span>Mưa: </span>
-            <span className="text-blue-600 dark:text-blue-400 font-mono">{displayRainMmH}mm</span>
+          <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse shrink-0" />
+          <div className="min-w-0 truncate text-[11px] font-black text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
+            <span className="text-amber-600 dark:text-amber-400">
+              🔮 {forecastOnlyCount ?? 14} điểm dự kiến
+            </span>
+            <span className="text-slate-400 font-normal">•</span>
+            <span className="text-red-600 dark:text-red-400 font-extrabold">
+              🚨 {verifiedCount ?? 4} điểm đã xác thực
+            </span>
+            <span className="text-slate-400 font-normal hidden sm:inline">•</span>
+            <span className="text-[#1A73E8] hidden sm:inline">17:00 – 19:00</span>
+            <span className="text-slate-400 font-normal hidden sm:inline">•</span>
+            <span className="text-blue-600 dark:text-blue-400 font-mono hidden sm:inline">{displayRainMmH}mm</span>
           </div>
         </div>
 
         <button
           type="button"
           onClick={() => setShowTimelineModal(true)}
-          className="text-[10.5px] font-extrabold text-[#1A73E8] bg-blue-50 dark:bg-blue-950 px-2 py-0.5 rounded-full shrink-0 flex items-center gap-0.5"
+          className="text-[10.5px] font-extrabold text-[#1A73E8] bg-blue-50 dark:bg-blue-950 px-2 py-0.5 rounded-full shrink-0 flex items-center gap-0.5 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition"
         >
-          <span>Chi tiết 3h ➔</span>
+          <span>Dự báo 3h ➔</span>
         </button>
       </div>
 

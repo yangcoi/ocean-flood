@@ -714,12 +714,17 @@ export default function AlertBottomSheet({
                 ? `🟠 Chú ý (~${displayedDepthCm}cm)`
                 : `🟡 Đọng nước (~${displayedDepthCm}cm)`}
             </span>
-            <span className="px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/70 text-[#1A73E8] dark:text-blue-300 text-[11px] font-bold flex items-center gap-1">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              {isVerified
-                ? `Xác minh (${displayedConfirmCount} người)`
-                : `Cộng đồng (${displayedConfirmCount} báo)`}
-            </span>
+            {displayedConfirmCount > 0 ? (
+              <span className="px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-300 text-[11px] font-bold flex items-center gap-1">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Đã xác thực ({displayedConfirmCount} người báo thật)</span>
+              </span>
+            ) : (
+              <span className="px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/70 border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-300 text-[11px] font-bold flex items-center gap-1">
+                <span>🔮</span>
+                <span>Dự kiến mô hình (Chưa có xác thực tại chỗ)</span>
+              </span>
+            )}
           </div>
           <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white mt-1 leading-snug">
             {hotspot.street_name}
@@ -738,6 +743,26 @@ export default function AlertBottomSheet({
           <X className="w-4 h-4" />
         </button>
       </div>
+
+      {/* BANNER NHẮC NHỞ XÁC THỰC KHI ĐANG LÀ ĐIỂM DỰ KIẾN */}
+      {displayedConfirmCount === 0 && (
+        <div className="p-2.5 rounded-2xl bg-amber-50/90 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-xs flex items-center justify-between gap-2.5">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-base shrink-0">🔮</span>
+            <p className="text-[11px] text-amber-900 dark:text-amber-200 leading-tight">
+              Điểm này đang trong vùng cảnh báo dự kiến (Open-Meteo &amp; Triều trạm Phú An). <strong>Chưa có người dân gửi ảnh tại hiện trường.</strong>
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => onOpenCameraReport(hotspot.hotspot_id)}
+            className="px-2.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-[11px] whitespace-nowrap shadow-sm shrink-0 flex items-center gap-1 active:scale-95 transition"
+          >
+            <Camera className="w-3.5 h-3.5" />
+            <span>Chụp ảnh xác thực</span>
+          </button>
+        </div>
+      )}
 
       {/* =====================================================================
           CẤP 1: THƯỚC ĐO NGẬP & LỜI KHUYÊN CHO PHƯƠNG TIỆN (NHÌN THẤY NGAY 1S)

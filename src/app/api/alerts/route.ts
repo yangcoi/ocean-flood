@@ -83,6 +83,15 @@ export async function GET(request: NextRequest) {
 
     const highRiskCount = features.filter((f) => f.properties.severity_level >= 2).length;
     const moderateRiskCount = features.filter((f) => f.properties.severity_level === 1).length;
+    const verifiedHotspotsCount = features.filter(
+      (f) => f.properties.confirm_count > 0 || f.properties.verification_status === 'VERIFIED'
+    ).length;
+    const forecastOnlyHotspotsCount = features.filter(
+      (f) =>
+        f.properties.severity_level >= 1 &&
+        f.properties.confirm_count === 0 &&
+        f.properties.verification_status !== 'VERIFIED'
+    ).length;
 
     const responsePayload = {
       type: 'FeatureCollection' as const,
@@ -97,6 +106,8 @@ export async function GET(request: NextRequest) {
           total_hotspots: features.length,
           high_risk_hotspots: highRiskCount,
           moderate_risk_hotspots: moderateRiskCount,
+          verified_hotspots: verifiedHotspotsCount,
+          forecast_only_hotspots: forecastOnlyHotspotsCount,
           active_crowd_reports: filteredCrowdReports.length,
           total_cameras: filteredCameras.length,
         },

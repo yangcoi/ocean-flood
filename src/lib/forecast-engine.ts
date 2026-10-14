@@ -727,14 +727,16 @@ export function evaluateHotspotForecast(
     eventType = 'TIDE_FORECAST';
   }
 
-  // 8. Trạng thái xác minh
+  // 8. Trạng thái xác minh theo nghiệp vụ thực tế:
+  // - Dù mô hình toán học dự báo xác suất hay độ sâu cao đến đâu, đó vẫn chỉ là DỰ BÁO (FORECAST_ACTIVE / MONITORING).
+  // - Chỉ khi có người dân tại chỗ báo cáo (crowdConfirmCount >= 1 hoặc crowd_reports thực tế), điểm đó mới được xem là ĐÃ XÁC THỰC HIỆN TRƯỜNG.
   let verificationStatus: VerificationStatus = 'MONITORING';
-  if (crowdConfirmCount >= 3 || (severityLevel >= 2 && floodProbabilityPct >= 75)) {
-    verificationStatus = 'VERIFIED';
-  } else if (crowdConfirmCount > 0) {
-    verificationStatus = 'UNVERIFIED';
-  } else if (severityLevel >= 1) {
-    verificationStatus = 'FORECAST_ACTIVE';
+  if (crowdConfirmCount >= 2) {
+    verificationStatus = 'VERIFIED'; // Đã có nhiều người dân cùng xác nhận thực tế tại chỗ
+  } else if (crowdConfirmCount === 1) {
+    verificationStatus = 'UNVERIFIED'; // 1 người dân vừa báo, đang chờ thêm kiểm chứng chéo
+  } else if (severityLevel >= 1 || floodProbabilityPct >= 30) {
+    verificationStatus = 'FORECAST_ACTIVE'; // Dự báo mô hình đang kích hoạt, CHƯA có người dân xác thực tại chỗ
   }
 
   // 9. Sinh Ngôn ngữ cảnh báo kép (Khoa học + Đời thường cho Xe máy & Ô tô)

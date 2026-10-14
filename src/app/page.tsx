@@ -67,6 +67,8 @@ export default function OceanFloodHomePage() {
   );
   const [isFallbackWeather, setIsFallbackWeather] = useState<boolean>(false);
   const [highRiskCount, setHighRiskCount] = useState<number>(0);
+  const [verifiedCount, setVerifiedCount] = useState<number>(0);
+  const [forecastOnlyCount, setForecastOnlyCount] = useState<number>(0);
   const [isLoadingAlerts, setIsLoadingAlerts] = useState<boolean>(true);
   const [isOffline, setIsOffline] = useState<boolean>(false);
 
@@ -176,6 +178,8 @@ export default function OceanFloodHomePage() {
         setTideNhaBe(data.metadata.tide_station_nha_be || null);
         setDistrictRainfall(data.metadata.district_rainfall || null);
         setHighRiskCount(data.metadata.summary_counts?.high_risk_hotspots ?? 0);
+        setVerifiedCount(data.metadata.summary_counts?.verified_hotspots ?? 0);
+        setForecastOnlyCount(data.metadata.summary_counts?.forecast_only_hotspots ?? 0);
       }
 
       setSelectedHotspot((prev) => {
@@ -387,6 +391,8 @@ export default function OceanFloodHomePage() {
             tideNhaBe={tideNhaBe}
             districtRainfall={districtRainfall}
             highRiskCount={highRiskCount}
+            verifiedCount={verifiedCount}
+            forecastOnlyCount={forecastOnlyCount}
             isLoading={isLoadingAlerts}
             onOpenRoutePlanner={() => {
               setSelectedHotspot(null);
