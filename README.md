@@ -1,7 +1,7 @@
 # 🌊 Ocean Flood
 
-> **Hệ Thống Bản Đồ Cảnh Báo Ngập & Điều Hướng Tránh Ngập Đô Thị TP.HCM**  
-> *Dự án kỹ thuật cá nhân (Personal Engineering Project & Prototype): Dự báo ngập sớm 1–3h kết hợp mô hình thủy văn kép (Mưa vệ tinh Open-Meteo & Đỉnh triều trạm Phú An/Nhà Bè), Cơ chế xác thực cộng đồng 5 lớp (5-Layer Verification) và Thuật toán điều hướng né ngập theo loại phương tiện (Xe máy & Ô tô).*
+> **Urban Flood Monitoring & Dynamic Avoidance Routing System for Ho Chi Minh City**  
+> *A real-time Web GIS & PWA engineering prototype featuring a 1–3h dual-hydrology forecast engine (Open-Meteo satellite rain + Phú An/Nhà Bè harmonic tidal model), a 5-layer crowd report verification guard, and vehicle-specific flood-aware routing (Motorcycles & Cars).*
 
 ---
 
@@ -15,56 +15,56 @@
 
 ---
 
-## 📌 Bối Cảnh & Phạm Vi Kỹ Thuật (Context & Technical Scope)
+## 📌 Context & Technical Scope
 
-### 1. Đặc thù bài toán thủy văn đô thị TP.HCM
-TP. Hồ Chí Minh là đô thị chịu tác động đồng thời của **2 yếu tố thủy văn độc lập**:
-1. **Triều cường bán nhật triều không đều**: Đỉnh triều dâng cao từ hạ lưu sông Sài Gòn & sông Đồng Điền (thường xuyên vượt mức Báo động 3 ≥ 1.60m), gây tràn bờ kênh rạch tại Quận 7, Quận 8 và khu vực trũng thấp.
-2. **Mưa dông nhiệt nhiệt đới có cường độ lớn**: Vũ lượng cục bộ có thể đạt 50 – 100 mm/h trong thời gian ngắn, vượt công suất thiết kế của mạng lưới cống thoát nước tại Bình Thạnh và TP. Thủ Đức.
-3. Khi hai hiện tượng này xảy ra đồng thời (đặc biệt trong khung giờ cao điểm 17:00 – 18:30), các tuyến đường giao thông trọng điểm bị ngập sâu, ảnh hưởng nghiêm trọng đến khả năng vận hành của xe máy (tắt máy) và xe ô tô gầm thấp (nguy cơ thủy kích).
+### 1. Urban Hydrology Challenges in Ho Chi Minh City
+Ho Chi Minh City experiences recurrent urban flooding driven by the simultaneous convergence of **two independent hydrological phenomena**:
+1. **Irregular Semidiurnal Tidal Surges**: Severe high tides advancing from the lower Saigon River and Đồng Điền River basins (frequently exceeding Warning Stage 3 ≥ 1.60m), overtopping canal embankments across District 7, District 8, and low-lying estuarine plains.
+2. **High-Intensity Tropical Convective Rainfall**: Localized precipitation rates often exceed 50 – 100 mm/h within short durations, surpassing the drainage capacity of historical stormwater networks in Bình Thạnh and Thủ Đức City.
+3. During peak evening commute hours (17:00 – 18:30), overlapping tidal crests and torrential downpours rapidly inundate arterial thoroughfares, causing widespread engine stalling for commuter motorbikes and catastrophic hydrolock risks for passenger cars.
 
-### 2. Định vị dự án (Project Scope)
-> ℹ️ **Phạm vi triển khai**: Đây là **dự án kỹ thuật cá nhân (Personal Engineering Project / Portfolio Showcase)** nhằm thử nghiệm và đối chuẩn các giải pháp kiến trúc: Web GIS trên nền WebGL, Thuật toán đánh giá rủi ro ngập đa biến, Cơ chế lọc báo cáo cộng đồng 5 lớp (5-Layer Guard) và Dynamic Routing tránh ngập theo phương tiện.  
+### 2. Project Positioning & Scope
+> ℹ️ **Technical Scope**: This project is an **individual engineering showcase & technical prototype** designed to validate modern spatial architectures: WebGL-accelerated Web GIS rendering, multi-variable flood risk assessment models, a 5-layer anti-spam verification pipeline, and dynamic avoidance routing tailored by vehicle clearance.  
 > 
-> Dự án không phát hành dưới dạng sản phẩm thương mại do các hạn chế về pháp lý dữ liệu camera giao thông công cộng và hạ tầng API thời gian thực. Toàn bộ mã nguồn được mở cho mục đích nghiên cứu và trao đổi kỹ thuật.
+> This repository is not published as a commercial consumer product due to regional traffic camera API licensing restrictions and urban municipal data governance constraints. Source code is published for technical demonstration, architectural reference, and academic exploration.
 
 ---
 
-## 🏗️ Kiến Trúc Hệ Thống (System Architecture)
+## 🏗️ System Architecture
 
 ```mermaid
 flowchart TD
-    subgraph DataSources["1. Tầng Nguồn Dữ Liệu Thời Gian Thực"]
-        OM["🛰️ Open-Meteo Satellite API<br>(Lượng mưa hiện tại & Dự báo 1–3h)"]
-        Tide["🌊 Astronomical Tide Harmonic Model<br>(Trạm Phú An & Nhà Bè)"]
-        Crowd["📱 Citizen Field Reports<br>(Ảnh chụp tại chỗ + GPS WGS84)"]
-        Seed["🗺️ HCM Spatial Seed Data<br>(18 Điểm đen ngập & 18 TTGT Cameras)"]
+    subgraph DataSources["1. Real-Time Data Ingestion Layer"]
+        OM["🛰️ Open-Meteo Satellite API<br>(Current Rainfall & 1–3h Forecasts)"]
+        Tide["🌊 Astronomical Harmonic Tide Model<br>(Phú An & Nhà Bè Stations)"]
+        Crowd["📱 Citizen Field Telemetry<br>(Direct Camera Capture + WGS84 GPS)"]
+        Seed["🗺️ HCM Spatial Seed Catalog<br>(18 Flood Hotspots & 18 Traffic Cameras)"]
     end
 
-    subgraph CoreEngines["2. Tầng Động Cơ Nghiệp Vụ (Next.js 14 Backend / Edge)"]
-        FE["⚙️ Forecast Engine<br>(Đánh giá rủi ro 0..3 & Sinh Ngôn ngữ kép)"]
-        VE["🛡️ 5-Layer Verification Engine<br>(Rate Limit, Geofence 500m, EXIF 10m, Consensus, Reputation)"]
-        RE["🧭 Flood-Aware Routing Engine<br>(Corridor Buffer 35m, OSRM/Google Routes API, Tránh hẻm ô tô)"]
+    subgraph CoreEngines["2. Core Domain Engines (Next.js 14 Backend / Edge)"]
+        FE["⚙️ Forecast Engine<br>(Risk Scoring 0..3 & Dual-Language Synthesis)"]
+        VE["🛡️ 5-Layer Verification Engine<br>(Rate Limit, 500m Geofence, EXIF Timestamp, Consensus, Reputation)"]
+        RE["🧭 Flood-Aware Routing Engine<br>(35m Buffer Corridor, OSRM/Google Routes API, Alley Suppression)"]
     end
 
-    subgraph API["3. Tầng Giao Tiếp REST API (App Router)"]
+    subgraph API["3. REST API Interface (Next.js App Router)"]
         API1["GET /api/alerts<br>(GeoJSON FeatureCollection + Metadata)"]
-        API2["POST /api/reports<br>(Báo ngập / Báo nước rút / Kiểm duyệt)"]
-        API3["POST /api/route-plan<br>(Lộ trình né ngập Xe máy & Ô tô)"]
+        API2["POST /api/reports<br>(Field Report / Water Receded / Moderation)"]
+        API3["POST /api/route-plan<br>(Flood-Free Routing for Motorbikes & Cars)"]
     end
 
-    subgraph Frontend["4. Tầng Giao Diện Người Dùng (Mobile-First PWA)"]
-        Map["🗺️ MapLibre GL JS Canvas<br>(Vector Tiles CARTO, Radar Glow, Polygons 35m)"]
-        HUD["📱 Top Status Bar & Hydrological HUD<br>(Đỉnh triều, Timeline mưa 3h, Bộ chọn 4 Quận)"]
-        Drawer["🧭 Route Planner Drawer<br>(So sánh Tuyến Đỏ vs Tuyến Xanh, 1-Tap Google Maps)"]
-        Modal["📸 5-Layer Crowd Report Modal<br>(Zero-Text UI, Chụp ảnh Camera trực tiếp)"]
+    subgraph Frontend["4. Client Presentation Layer (Mobile-First PWA)"]
+        Map["🗺️ MapLibre GL JS Canvas<br>(CARTO Vector Tiles, Radar Glow, 35m Polygons)"]
+        HUD["📱 Top Status Bar & Hydrological HUD<br>(Tidal Crests, 3h Rain Timeline, 4-District Selector)"]
+        Drawer["🧭 Route Planner Drawer<br>(Danger Red vs Safe Blue Route Comparison, 1-Tap Google Maps)"]
+        Modal["📸 5-Layer Crowd Report Modal<br>(Zero-Text UI, Direct Camera Capture)"]
     end
 
     OM --> FE
     Tide --> FE
     Seed --> FE
     Crowd --> VE
-    VE -.->|Thăng cấp VERIFIED| FE
+    VE -.->|Consensus Upgrade to VERIFIED| FE
     FE --> API1
     VE --> API2
     FE & Seed --> RE --> API3
@@ -76,120 +76,120 @@ flowchart TD
 
 ---
 
-## ⚙️ Các Phân Hệ Kỹ Thuật Cốt Lõi (Core Technical Subsystems)
+## ⚙️ Core Technical Subsystems
 
-### 1. Mô Hình Dự Báo Thủy Văn Đô Thị Kép (Urban Hydrology Model)
-- **Dữ liệu mưa Open-Meteo**: Truy vấn vũ lượng theo tọa độ trung tâm từng quận huyện, tính toán lượng mưa tích lũy và dự báo diễn biến 1 giờ, 2 giờ, 3 giờ tới.
-- **Mô hình Thủy triều Thiên văn (Harmonic Astronomical Tide Model)**:
-  - Tính toán mực nước bán nhật triều không đều dựa trên chu kỳ ngày trăng (Chu kỳ Synodic ~29.53 ngày) tại 2 trạm quan trắc: **Trạm Phú An** (Sông Sài Gòn) và **Trạm Nhà Bè** (Kênh Đồng Điền).
-  - Phân loại 4 cấp báo động thủy triều:
-    - **Dưới BĐ1**: < 1.40m (Mực nước ổn định)
-    - **Báo động 1**: 1.40m – 1.49m (Chớm ngập vùng trũng thấp ven sông)
-    - **Báo động 2**: 1.50m – 1.59m (Ngập trung bình các đoạn trũng)
-    - **Báo động 3**: ≥ 1.60m (Nguy cơ ngập triều diện rộng)
-- **Công thức tính điểm rủi ro ngập đa nhân tố**:
+### 1. Dual-Hydrology Forecast Engine
+- **Precipitation Telemetry (Open-Meteo)**: Ingests real-time rainfall data indexed across geographical district centroids, computing cumulative accumulation and predictive 1h, 2h, and 3h horizons.
+- **Astronomical Harmonic Tide Model**:
+  - Simulates semidiurnal tidal oscillations based on lunar synodic orbital cycles (~29.53 days) across two critical hydrological monitoring stations: **Phú An** (Saigon River) and **Nhà Bè** (Đồng Điền Canal).
+  - Categorizes hydrological danger into 4 standard stages:
+    - **Below Stage 1**: < 1.40m (Normal river levels)
+    - **Stage 1 (Warning 1)**: 1.40m – 1.49m (Incipient flooding in lowest banks)
+    - **Stage 2 (Warning 2)**: 1.50m – 1.59m (Moderate inundation across estuarine streets)
+    - **Stage 3 (Warning 3)**: ≥ 1.60m (City-wide tidal overflow danger)
+- **Multi-Factor Risk Assessment Algorithm**:
   ```text
   S_flood = (w_rain × S_rain) + (w_tide × S_tide) + (w_history × S_history) + S_crowd
   ```
-  Trọng số thích ứng theo cao trình thực tế: khu vực đồi dốc (> 2.2m) ưu tiên trọng số mưa (65%), khu vực trũng ven sông (< 1.35m) cân bằng giữa mưa (42%) và triều cường (40%).
+  Dynamically balances coefficients by topographical elevation: high terrain (> 2.2m) weights precipitation heavily (65%), while low-lying alluvial basins (< 1.35m) balance rain (42%) and tidal pressure (40%).
 
-### 2. Hệ Thống Cảnh Báo Ngôn Ngữ Kép (Dual-Language Alert System)
-Kết hợp đồng thời hai tầng thông tin cho từng điểm cảnh báo:
-- **Tầng Khoa học (Scientific Metrics)**:
-  - Cường độ mưa: `mm/h`
-  - Đỉnh triều trạm Phú An / Nhà Bè: `m`
-  - Xác suất ngập mô hình: `%`
-  - Độ sâu ngập ước tính: `cm`
-- **Tầng Khuyến nghị theo Phương tiện (Vehicle-Specific Advice)**:
-  - **Xe máy (Motorcycle)**:
-    - **Ngập nửa bánh xe (~15 cm)**: Xe số lưu thông bình thường, xe tay ga giảm tốc tránh tạo sóng nước.
-    - **Ngập ngang ống pô (~30 cm)**: Nguy cơ tắt máy cao đối với xe tay ga; khuyến nghị chuyển sang tuyến thay thế.
-    - **Ngập lút yên (> 45 cm)**: Cấm lưu thông do nguy cơ trôi xe và mất an toàn.
-  - **Xe ô tô (Car / Sedan / SUV)**:
-    - **Chạm gầm xe Sedan (~20 – 25 cm)**: Xe gầm thấp có nguy cơ ngập sàn; khuyến nghị chuyển hướng sớm.
-    - **Ngập nửa bánh / Chạm nắp ca-pô (> 45 cm)**: Nguy cơ thủy kích cao khi gặp sóng xung kích từ xe tải; cấm đi vào.
+### 2. Dual-Language Alert System
+Translates raw sensor telemetry into intuitive, vehicle-actionable guidance:
+- **Scientific Layer (Quantitative Data)**:
+  - Rain Intensity: `mm/h`
+  - Current & Peak Tide Level: `m`
+  - Computational Flood Probability: `%`
+  - Estimated Inundation Depth: `cm`
+- **Vehicle-Specific Layer (Practical Driver Advice)**:
+  - **Motorcycles (Two-Wheelers)**:
+    - **Half-wheel depth (~15 cm)**: Safe for manual bikes; scooters should reduce speed to avoid wave wash.
+    - **Exhaust pipe level (~30 cm)**: Critical engine shutdown risk for automatic scooters; detour route recommended.
+    - **Seat height depth (> 45 cm)**: Extreme danger of vehicle drift and loss of stability; passage prohibited.
+  - **Passenger Cars (Sedans & SUVs)**:
+    - **Sedan underbody contact (~20 – 25 cm)**: Risk of floorboard seepage; early detour to elevated avenues advised.
+    - **Half-wheel / Hood level (> 45 cm)**: Extreme risk of catastrophic engine hydrolock caused by passing truck wakes; detour mandatory.
 
-### 3. Cơ Chế Kiểm Soát Báo Cáo Cộng Đồng 5 Lớp (5-Layer Verification Guard)
-Cơ chế bảo vệ dữ liệu chống tin giả, spam và báo cáo sai thực địa:
-1. **Lớp 1 — Rate Limiting per Device**: Khống chế tối đa ≤ 5 lượt báo cáo / giờ / thiết bị (dựa trên SHA-256 Device Fingerprint).
-2. **Lớp 2 — Hard Geofence ≤ 500m**: Kiểm tra khoảng cách Haversine giữa GPS thiết bị và vị trí báo ngập. Từ chối yêu cầu nếu khoảng cách > 500m hoặc sai số GPS > 150m (HTTP 422 `GEOFENCE_VIOLATION`).
-3. **Lớp 3 — Proof-of-Presence & EXIF Validation**: Yêu cầu chụp ảnh trực tiếp qua Camera (vô hiệu hóa tải ảnh từ thư viện), nén Client Canvas WebP < 150KB, kiểm tra tem thời gian EXIF ≤ 10 phút.
-4. **Lớp 4 — Spatial Clustering & Cross-Verification (Bán kính 150m)**:
-   - 1 báo cáo: Trạng thái `UNVERIFIED`.
-   - Có từ 3 người độc lập cùng xác nhận trong bán kính 150m: Tự động thăng cấp lên `VERIFIED`.
-5. **Lớp 5 — Device Reputation Engine & TTL (90 phút)**: Hệ thống cộng/trừ điểm tin cậy thiết bị (+5 khi hợp lệ, -5 khi vi phạm). Báo cáo tự động hết hiệu lực sau 90 phút.
+### 3. 5-Layer Crowd Verification Guard
+A multi-tier defense pipeline preventing false reports, remote vandalism, and telemetry manipulation:
+1. **Layer 1 — Rate Limiting per Device**: Enforces a strict quota of ≤ 5 reports / hour / device (identified via one-way SHA-256 fingerprint hash).
+2. **Layer 2 — Hard Geofence ≤ 500m**: Validates user Haversine distance against target hotspot coordinates. Submissions with distance > 500m or GPS accuracy > 150m are rejected instantly (HTTP 422 `GEOFENCE_VIOLATION`).
+3. **Layer 3 — Proof-of-Presence & EXIF Validation**: Requires live camera hardware capture (gallery uploads disabled), compresses images client-side via WebP Canvas (< 150KB), and verifies EXIF metadata timestamps are within ≤ 10 minutes of submission.
+4. **Layer 4 — Spatial Clustering & Cross-Verification (150m Radius)**:
+   - 1 report: Flagged as `UNVERIFIED` (cautionary status).
+   - ≥ 3 independent reports clustered within 150m (or coinciding with active hydrological threshold alerts): Promoted automatically to `VERIFIED`.
+5. **Layer 5 — Device Reputation Engine & TTL (90 Minutes)**: Dynamically adjusts device trust scores (+5 for verified submissions, -5 for spam). Reports automatically expire after 90 minutes unless renewed by ground reports.
 
-### 4. Thuật Toán Tìm Lộ Trình Né Ngập (Flood-Aware Routing Engine)
-- **Độ chính xác tim đường**: 100% lộ trình bám sát tim đường bộ thực tế qua OSRM (Open Source Routing Machine) và Google Maps Routes API Adapter; không sử dụng đường thẳng nối điểm.
-- **Vùng đệm kiểm tra giao cắt (Corridor Buffer 35m)**: Sử dụng giải thuật `pointToSegmentDistanceMeters` để kiểm tra va chạm không gian giữa tuyến đi và phân đoạn ngập, tránh cảnh báo nhầm đối với các tuyến đường song song hoặc cầu vượt.
-- **Bộ lọc phương tiện**:
-  - **Xe máy**: Ngưỡng chịu ngập < 20 cm.
-  - **Ô tô**: Ngưỡng chịu ngập < 25 cm. Khóa chính sách không dẫn ô tô vào hẻm dân sinh hẹp, ưu tiên các trục đại lộ lớn (Phạm Văn Đồng, Điện Biên Phủ, Võ Văn Kiệt).
-- **Deep-link Google Maps**: Tự động sinh URL mở ứng dụng Google Maps chính chủ với đầy đủ tọa độ nguồn, đích, điểm né (waypoints) và tham số phương tiện (`travelmode=two-wheeler` / `travelmode=driving`).
+### 4. Flood-Aware Routing Engine
+- **Road-Snapped Geometry**: 100% of generated paths adhere to topological centerlines via OSRM (Open Source Routing Machine) and Google Maps Routes API adapter; eliminates straight "as-the-crow-flies" vectors.
+- **Spatial Collision Detection (35m Corridor Buffer)**: Utilizes a segment-to-point Euclidean algorithm (`pointToSegmentDistanceMeters`) to detect route intersections with flooded road segments while preventing false alarms on parallel elevated viaducts.
+- **Vehicle-Specific Constraints**:
+  - **Motorcycle Profile**: Depth tolerance threshold < 20 cm.
+  - **Car Profile**: Depth tolerance threshold < 25 cm. Enforces strict commercial routing rules prohibiting diversion into narrow residential dead-ends, prioritizing arterial avenues (Phạm Văn Đồng, Điện Biên Phủ, Võ Văn Kiệt).
+- **1-Tap Native Google Maps Deep-Link**: Automatically generates WGS84 URLs pre-configured with origin, destination, avoidance waypoints, and vehicle travel modes (`travelmode=two-wheeler` / `travelmode=driving`).
 
 ---
 
-## 🛠️ Công Nghệ Sử Dụng (Tech Stack)
+## 🛠️ Tech Stack
 
-| Phân tầng | Công nghệ | Mục đích sử dụng |
+| Layer | Technology | Technical Purpose |
 |---|---|---|
-| **Framework** | **Next.js 14 (App Router)** | Server Components, Edge API Routes, SSR & Static Generation. |
-| **Ngôn ngữ** | **TypeScript 5.7 (Strict Mode)** | Đảm bảo kiểu dữ liệu không gian GeoJSON và API DTOs. |
-| **Bản đồ (Web GIS)** | **MapLibre GL JS 4.7** | WebGL Vector Map rendering 60fps, GeoJSON dynamic layers. |
-| **Bản đồ nền** | **CARTO Voyager Vector Tiles** | Basemap vector sạch, tương thích Light & Dark mode. |
-| **Routing Engine** | **OSRM Public API + Google Routes Adapter** | Tính toán lộ trình thực tế, giải mã Polyline. |
-| **Khí tượng** | **Open-Meteo Satellite API** | Dữ liệu lượng mưa thời gian thực và mô hình triều thiên văn. |
-| **Automated Testing** | **Node.js Test Suite** | 19 kịch bản kiểm thử tích hợp tự động (End-to-End API). |
-| **Styling** | **Tailwind CSS 3.4 & Lucide Icons** | Glassmorphism UI, Responsive Mobile-First. |
-| **Mobile PWA** | **Progressive Web App** | Hỗ trợ cài đặt màn hình chính (Standalone Manifest). |
+| **Framework** | **Next.js 14 (App Router)** | Server Components, Edge API Routes, SSR & Static Optimization. |
+| **Language** | **TypeScript 5.7 (Strict Mode)** | Type-safe GeoJSON spatial schemas and API DTO contracts. |
+| **Web GIS Rendering** | **MapLibre GL JS 4.7** | WebGL vector map rendering at 60fps, dynamic GeoJSON layers, Pulsing Sonar Markers. |
+| **Vector Basemap** | **CARTO Voyager Tiles** | Clean vector tiles, high contrast, seamless Light/Dark mode transitions. |
+| **Routing Engine** | **OSRM Public API + Google Routes Adapter** | True road-snapped path computation, polyline decoding, fallback resilience. |
+| **Meteorology** | **Open-Meteo Satellite API** | Real-time precipitation telemetry combined with harmonic astronomical tide models. |
+| **Testing** | **Node.js Automated Test Suite** | 19 automated integration and end-to-end API regression test cases. |
+| **Styling & UI** | **Tailwind CSS 3.4 & Lucide Icons** | Glassmorphism design tokens, mobile-first responsive touch targets ≥ 48px. |
+| **Mobile Deployment** | **Progressive Web App (PWA)** | Standalone web manifest, offline-ready application shell. |
 
 ---
 
-## 📂 Cấu Trúc Mã Nguồn (Directory Structure)
+## 📂 Project Directory Structure
 
 ```text
 ocean-flood/
-├── docs/                                # Hồ sơ kỹ thuật và tài liệu kiến trúc dự án
-│   ├── 00-brief.md                      # Tóm tắt bài toán & mục tiêu hệ thống
-│   ├── 01-data-sources.md               # Phân tích nguồn dữ liệu mưa & triều cường
-│   ├── 02-prd.md                        # Bản đặc tả yêu cầu sản phẩm (PRD)
-│   ├── 03-architecture.md               # Kiến trúc hệ thống, ADRs & Threat Model
-│   ├── 05-cartography.md                # Quy chuẩn bản đồ & bảng màu CVD-Safe
-│   ├── 05-design-spec.md                # Đặc tả Design Tokens & UI Components
-│   ├── 07-pm-execution-plan.md          # Kế hoạch điều hành & giám sát tiến độ
-│   ├── 08-qa-comprehensive-audit.md     # Báo cáo kiểm thử tự động toàn diện (19/19 PASS)
-│   └── qa-test-results.json             # Dữ liệu log chi tiết từng test case
+├── docs/                                # Technical specifications & architectural records
+│   ├── 00-brief.md                      # Problem statement & architectural goals
+│   ├── 01-data-sources.md               # Hydro-meteorological data source evaluation
+│   ├── 02-prd.md                        # Product requirements document (PRD)
+│   ├── 03-architecture.md               # System design, ADRs & threat modeling
+│   ├── 05-cartography.md                # Map styling & CVD-safe color palettes
+│   ├── 05-design-spec.md                # UI design tokens & component specifications
+│   ├── 07-pm-execution-plan.md          # Project governance & delivery milestones
+│   ├── 08-qa-comprehensive-audit.md     # Automated QA audit report (19/19 PASS)
+│   └── qa-test-results.json             # Structured JSON test execution logs
 ├── public/
-│   ├── icon.svg                         # Icon Vector ứng dụng
-│   └── manifest.webmanifest             # Cấu hình PWA Standalone Manifest
+│   ├── icon.svg                         # Vector application icon
+│   └── manifest.webmanifest             # Standalone PWA manifest configuration
 ├── scripts/
-│   └── qa-full-test.mjs                 # Script tự động chạy kiểm thử 5 trụ cột hệ thống
+│   └── qa-full-test.mjs                 # Automated regression test suite (19 test cases)
 ├── src/
 │   ├── app/
 │   │   ├── api/
-│   │   │   ├── alerts/route.ts          # API GET: Trả về GeoJSON Hotspots, Cameras & Metadata
-│   │   │   ├── reports/route.ts         # API POST: Báo ngập cộng đồng qua kiểm duyệt 5 lớp
-│   │   │   └── route-plan/route.ts      # API POST: Tính toán lộ trình né ngập cho Xe máy / Ô tô
-│   │   ├── globals.css                  # CSS Tokens, Keyframes Radar Pulse & Glassmorphism
-│   │   ├── layout.tsx                   # Root Layout, Mobile Viewport & PWA Headers
-│   │   └── page.tsx                     # Single Page Map Application kết nối toàn bộ Components
+│   │   │   ├── alerts/route.ts          # GET: Inundation hotspots, cameras & metadata
+│   │   │   ├── reports/route.ts         # POST: 5-layer verified community telemetry
+│   │   │   └── route-plan/route.ts      # POST: Flood-free route planning (Bikes & Cars)
+│   │   ├── globals.css                  # Design tokens, radar pulse keyframes & glassmorphism
+│   │   ├── layout.tsx                   # Root layout, mobile viewport & PWA meta headers
+│   │   └── page.tsx                     # Single-page interactive Web GIS application
 │   ├── components/
-│   │   ├── AlertBottomSheet.tsx         # Thẻ chi tiết điểm ngập Ngôn ngữ kép (Khoa học vs Đời thường)
-│   │   ├── CrowdReportModal.tsx         # Hộp thoại Báo ngập 5 Lớp (Camera chụp tại chỗ, Zero-Text UI)
-│   │   ├── MapCanvas.tsx                # Bản đồ MapLibre GL tương tác toàn màn hình
-│   │   ├── RoutePlannerDrawer.tsx       # Ngăn tìm kiếm lộ trình né ngập & Deep-link Google Maps
-│   │   ├── SecurityCameraModal.tsx      # Modal thông tin kết nối Cổng Camera TTGT TP.HCM
-│   │   ├── TopStatusBar.tsx             # Thanh HUD kính mờ hiển thị Mưa, Triều & Bộ chọn 4 Quận
-│   │   └── VehicleToggle.tsx            # Công tắc nổi chuyển đổi tức thì giữa Xe máy & Ô tô
+│   │   ├── AlertBottomSheet.tsx         # Dual-language alert bottom sheet (Science + Vehicle)
+│   │   ├── CrowdReportModal.tsx         # 5-layer camera reporting modal (Zero-text touch UI)
+│   │   ├── MapCanvas.tsx                # Fullscreen interactive MapLibre GL canvas
+│   │   ├── RoutePlannerDrawer.tsx       # Avoidance route drawer & Google Maps deep-linker
+│   │   ├── SecurityCameraModal.tsx      # Municipal traffic camera link modal
+│   │   ├── TopStatusBar.tsx             # Translucent HUD for precipitation, tides & district filter
+│   │   └── VehicleToggle.tsx            # Floating toggle switch between Motorbike and Car
 │   ├── data/
-│   │   └── hcm-spatial-seed.ts          # 18 Điểm đen ngập & 18 Camera TTGT tại 4 Quận MVP
+│   │   └── hcm-spatial-seed.ts          # Seed catalog of 18 flood hotspots & 18 traffic cameras
 │   └── lib/
-│       ├── forecast-engine.ts           # Động cơ dự báo mưa/triều & sinh ngôn ngữ kép
-│       ├── routing-engine.ts            # Động cơ định tuyến né ngập, giải mã OSRM/Google Polyline
-│       └── verification-engine.ts       # Động cơ kiểm duyệt báo cáo cộng đồng 5 lớp
+│       ├── forecast-engine.ts           # Dual-hydrology forecast engine & advice generator
+│       ├── routing-engine.ts            # OSRM & Google Routes polyline routing engine
+│       └── verification-engine.ts       # 5-layer crowd report verification pipeline
 ├── supabase/
 │   └── migrations/
-│       └── 0001_ocean_flood_postgis.sql # DDL PostGIS Tables, GiST Indexes & Spatial Functions
+│       └── 0001_ocean_flood_postgis.sql # PostGIS table schemas, GiST indexes & spatial queries
 ├── package.json
 ├── tailwind.config.ts
 └── tsconfig.json
@@ -197,80 +197,82 @@ ocean-flood/
 
 ---
 
-## 🚦 Cài Đặt & Chạy Cục Bộ (Quickstart)
+## 🚦 Local Quickstart
 
-### Yêu cầu môi trường
-- **Node.js**: Phiên bản `18.18.0` trở lên (Khuyến nghị `Node.js 20 LTS`).
-- **Trình quản lý gói**: `npm` hoặc `pnpm` / `yarn`.
+### Prerequisites
+- **Node.js**: Version `18.18.0` or higher (Recommended: `Node.js 20 LTS`).
+- **Package Manager**: `npm`, `pnpm`, or `yarn`.
 
-### Các bước thực hiện
+### Installation Steps
 
-1. **Clone repository:**
+1. **Clone the repository:**
    ```bash
    git clone https://github.com/yangcoi/ocean-flood.git
    cd ocean-flood
    ```
 
-2. **Cài đặt dependencies:**
+2. **Install project dependencies:**
    ```bash
    npm install
    ```
 
-3. **Cấu hình môi trường (Tùy chọn):**
-   Tạo file `.env.local` ở thư mục gốc nếu muốn cấu hình Google Routes API (mặc định hệ thống dùng OSRM hoàn toàn miễn phí):
+3. **Configure Environment Variables (Optional):**
+   Create a `.env.local` file in the root directory if you wish to use Google Routes API (the system defaults to public OSRM with zero API keys required):
    ```env
+   # Optional: Google Maps Routes API Key
    # GOOGLE_MAPS_API_KEY=your_api_key_here
    ```
 
-4. **Kiểm tra TypeScript & Build:**
+4. **Verify TypeScript Types & Build:**
    ```bash
    npm run typecheck
    npm run build
    ```
 
-5. **Khởi chạy máy chủ Production:**
+5. **Start Production Server:**
    ```bash
    npm start
-   # Truy cập ứng dụng tại: http://localhost:3000
+   # Open your browser at: http://localhost:3000
    ```
 
 ---
 
-## 🧪 Kết Quả Kiểm Thử Tự Động (Automated Testing)
+## 🧪 Automated Testing & QA Audit
 
-Dự án tích hợp bộ script kiểm thử độc lập [`scripts/qa-full-test.mjs`](scripts/qa-full-test.mjs) đo đạc trực tiếp trên máy chủ đang chạy:
+The repository includes a standalone automated test script [`scripts/qa-full-test.mjs`](scripts/qa-full-test.mjs) that validates all core subsystems against live HTTP endpoints:
 
 ```bash
+# Ensure server is running on port 3000, then execute:
 node scripts/qa-full-test.mjs
 ```
 
-### Bảng tổng kết kết quả kiểm thử (19/19 Test Cases Đạt 100%)
+### Summary of Audit Results (19/19 PASS — 100%)
 
-| Nhóm kiểm thử | Số TC | Nội dung kiểm tra | Kết quả |
+| Test Suite | Tests | Scope & Assertions | Status |
 |---|:---:|---|:---:|
-| **Suite 1: Alerts API** | 4 | HTTP 200, Latency (< 100ms), Chuẩn GeoJSON 18 Hotspots, 4 Kịch bản mô phỏng thời tiết (`live`, `peak_tide_rain`, `heavy_rain_only`, `dry_safe`). | **4/4 PASS** |
-| **Suite 2: 5-Layer Verification** | 5 | Rate limit 5 lần/giờ (HTTP 429), Geofence cứng 500m (HTTP 422), Bắt buộc ảnh EXIF mới, Thăng cấp đồng thuận từ 3 người báo. | **5/5 PASS** |
-| **Suite 3: Routing Engine** | 4 | Độ bám tim đường OSRM (62–234 coords), Corridor buffer 35m chống báo động giả, Khóa chính sách hẻm nhỏ cho ô tô, Deep-link Google Maps. | **4/4 PASS** |
-| **Suite 4: PWA & Infrastructure** | 3 | Web App Manifest standalone, Mobile Viewport, Cloudflare Public HTTPS Tunnel phản hồi HTTP 200. | **3/3 PASS** |
-| **Suite 5: Build & Static Analysis** | 3 | `tsc --noEmit` 0 error, Next.js Production Build 0 warning, bundle size tối ưu 250 kB. | **3/3 PASS** |
-| **Tổng cộng** | **19** | **Production Readiness Score: 98.5 / 100** | **19/19 PASS** |
+| **Suite 1: Alerts API** | 4 | HTTP 200, Latency (< 100ms), 18-Hotspot GeoJSON Schema, 4 Weather Scenarios (`live`, `peak_tide_rain`, `heavy_rain_only`, `dry_safe`). | **4/4 PASS** |
+| **Suite 2: 5-Layer Verification** | 5 | Rate limit enforcement at 5/hr (HTTP 429), 500m geofence rejection (HTTP 422), mandatory live camera EXIF, 3-report consensus upgrade. | **5/5 PASS** |
+| **Suite 3: Routing Engine** | 4 | Road-snapped OSRM geometries (62–234 points), 35m corridor buffer collision detection, car alley suppression, Google Maps deep-link formatting. | **4/4 PASS** |
+| **Suite 4: PWA & Infrastructure** | 3 | Standalone Web App Manifest validation, mobile viewport scalability locks, Cloudflare HTTPS public tunnel verification (HTTP 200). | **3/3 PASS** |
+| **Suite 5: Build & Static Analysis** | 3 | `tsc --noEmit` 0 errors, Next.js production build 0 warnings, optimized client bundle size (250 kB). | **3/3 PASS** |
+| **Total** | **19** | **Production Readiness Score: 98.5 / 100** | **19/19 PASS** |
 
-*(Xem chi tiết tại [docs/08-qa-comprehensive-audit.md](docs/08-qa-comprehensive-audit.md) và file dữ liệu [docs/qa-test-results.json](docs/qa-test-results.json))*
-
----
-
-## ⚖️ Bảo Mật Dữ Liệu & Khuyến Cáo Sử Dụng (Security & Disclaimer)
-
-1. **Bảo mật dữ liệu định vị**:
-   - Tuân thủ quy định bảo vệ dữ liệu cá nhân (Nghị định 13/2023/NĐ-CP): Không thu thập hoặc lưu trữ bất kỳ thông tin nhận dạng cá nhân nào (PII).
-   - Thiết bị được định danh ẩn danh bằng mã băm một chiều SHA-256 (`device_hash`).
-2. **Khuyến cáo an toàn giao thông**:
-   - Dữ liệu cảnh báo và lộ trình gợi ý mang tính chất tham khảo kỹ thuật.
-   - Khi tham gia giao thông, người điều khiển phương tiện phải tuân thủ hệ thống biển báo, đèn tín hiệu và hiệu lệnh của lực lượng chức năng tại hiện trường.
+*(Detailed metrics available in [docs/08-qa-comprehensive-audit.md](docs/08-qa-comprehensive-audit.md) and [docs/qa-test-results.json](docs/qa-test-results.json))*
 
 ---
 
-## 📄 Bản Quyền (License)
+## ⚖️ Privacy & Technical Disclaimers
 
-Dự án được phân phối theo giấy phép [MIT License](LICENSE).
-Mục đích sử dụng: Học tập, nghiên cứu kỹ thuật và lưu trữ hồ sơ năng lực cá nhân.
+1. **Geolocation Privacy**:
+   - Complies with data minimization principles (Decree 13/2023/ND-CP): No Personally Identifiable Information (PII) such as phone numbers, device serials, or user identities is collected or retained.
+   - Devices are pseudonymized using irreversible one-way SHA-256 fingerprint hashing (`device_hash`).
+2. **Navigation & Safety Advisory**:
+   - Model outputs and generated routes serve as experimental navigation references.
+   - Operators of motor vehicles must adhere to official road signage, traffic police instructions, and immediate on-site conditions.
+
+---
+
+## 📄 License
+
+This project is distributed under the [MIT License](LICENSE).  
+Intended for academic exploration, technical demonstration, and personal engineering showcase.
